@@ -19,6 +19,9 @@ class TapInstagramUser(Tap):
     """Extracteur personnalisé pour l'API Meta (Instagram Insights)."""
     
     name = "tap-instagram-user"
+    # Nom du package PyPI réellement installé (différent de `name` ci-dessus),
+    # nécessaire pour que get_plugin_version() résolve la bonne version.
+    package_name = "plinxore-tap-instagram-user"
 
     # 1. DÉFINITION DES PARAMÈTRES ATTENDUS
     # Supabase/Dagster devront injecter ces deux valeurs
