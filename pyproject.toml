@@ -8,12 +8,15 @@ build-backend = "hatchling.build"
 [project]
 name = "plinxore-tap-instagram-user"
 dynamic = ["version"]
-description = "Singer tap for meta custom, built with the Meltano Singer SDK."
+description = "Singer tap for the Meta Graph API (Instagram Insights), built with the Meltano Singer SDK."
 readme = "README.md"
 authors = [{ name = "Ibrahim Gado Mayaki Hamza", email = "ibrahim.mayaki@plinxore.com" }]
 keywords = [
     "ELT",
-    "meta custom",
+    "meltano",
+    "singer-io",
+    "instagram",
+    "meta",
 ]
 classifiers = [
     "Intended Audience :: Developers",
