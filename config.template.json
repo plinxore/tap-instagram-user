@@ -1,6 +1,6 @@
 {
-  "access_token": "<TON_LONG_LIVED_TOKEN_META>",
-  "ig_user_id": "<TON_IG_USER_ID>",
+  "access_token": "<LONG_LIVED_TOKEN_META>",
+  "ig_user_id": "<IG_USER_ID>",
 
   "start_date": "2025-06-01T00:00:00Z",
   "days_to_subtract": 0,
