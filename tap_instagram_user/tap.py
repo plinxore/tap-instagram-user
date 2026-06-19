@@ -6,7 +6,6 @@ from typing import List
 from singer_sdk import Tap, Stream
 from singer_sdk import typing as th
 
-# On prépare l'import de notre flux générique (qui sera codé à la prochaine étape)
 from tap_instagram_user.streams import MetaRawInsightsStream
 
 if sys.version_info >= (3, 12):
@@ -23,8 +22,6 @@ class TapInstagramUser(Tap):
     # nécessaire pour que get_plugin_version() résolve la bonne version.
     package_name = "plinxore-tap-instagram-user"
 
-    # 1. DÉFINITION DES PARAMÈTRES ATTENDUS
-    # Supabase/Dagster devront injecter ces deux valeurs
     config_jsonschema = th.PropertiesList(
         th.Property(
             "access_token",
@@ -39,7 +36,6 @@ class TapInstagramUser(Tap):
             required=True,
             description="L'ID du compte Instagram professionnel"
         ),
-        # La date de départ en cas de première extraction
         th.Property(
             "start_date",
             th.DateTimeType,
@@ -172,27 +168,24 @@ class TapInstagramUser(Tap):
         
         streams: List[Stream] = []
 
-        # 1. Les métriques/breakdowns à extraire viennent de la config. "metrics"
-        # est obligatoire (cf. config_jsonschema) : la validation du tap échoue
-        # avant même d'arriver ici si elle est absente.
+        # "metrics" est obligatoire (cf. config_jsonschema) : la validation du
+        # tap échoue avant même d'arriver ici si elle est absente.
         metrics_config = self.config["metrics"]
 
-        # 2. La boucle de génération dynamique
         for entry in metrics_config:
             metric = entry["metric"]
             breakdowns = entry.get("breakdowns") or [""]
             for breakdown in breakdowns:
-                
-                # Création d'un nom de table SQL-friendly (sans virgule)
+                # Nom de table SQL-friendly (sans virgule).
                 if breakdown:
                     safe_breakdown = breakdown.replace(",", "_and_")
                     stream_name = f"ig_{metric}_by_{safe_breakdown}"
                 else:
                     stream_name = f"ig_{metric}_base"
-                    
-                # On instancie notre flux générique, en propageant les éventuelles
-                # surcharges définies sur cette entrée `metrics` (None si absentes,
-                # auquel cas get_param() retombe sur la valeur globale du tap).
+
+                # Les surcharges éventuelles de cette entrée `metrics` sont
+                # propagées au stream (None si absentes, auquel cas get_param()
+                # retombe sur la valeur globale du tap).
                 stream = MetaRawInsightsStream(
                     tap=self,
                     name=stream_name,
