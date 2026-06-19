@@ -1,0 +1,108 @@
+send_anonymous_usage_stats: true
+project_id: "tap-instagram-user"
+default_environment: test
+requires_meltano: ">=4.0"
+environments:
+- name: test
+plugins:
+  extractors:
+  - name: "tap-instagram-user"
+    namespace: "tap_instagram_user"
+    pip_url: -e .
+    capabilities:
+    - state
+    - catalog
+    - discover
+    - about
+    - stream-maps
+    - structured-logging
+
+    settings:
+    - name: access_token
+      label: Access Token
+      description: Le Long-Lived Token du client Meta
+      kind: password
+      sensitive: true
+
+    - name: ig_user_id
+      label: Instagram User ID
+      description: L'ID du compte Instagram professionnel
+
+    - name: start_date
+      kind: date_iso8601
+      label: Start Date
+      description: >
+        Date de départ en cas de première extraction (ignorée dès qu'un
+        bookmark existe). Si absente, calculée automatiquement (1er du mois
+        en cours moins 12 mois).
+
+    - name: days_to_subtract
+      kind: integer
+      label: Days To Subtract
+      description: Fenêtre de chevauchement (jours déjà couverts à ré-extraire à chaque run)
+
+    - name: period
+      label: Period
+      description: Granularité demandée à l'API Meta Insights (paramètre `period`)
+
+    - name: timeframe
+      label: Timeframe
+      description: Paramètre `timeframe` optionnel transmis à l'API Meta Insights
+
+    - name: metric_type
+      label: Metric Type
+      description: Paramètre `metric_type` transmis à l'API Meta Insights
+
+    - name: generate_dates_range
+      label: Generate Dates Range
+      description: >
+        'active' (défaut) = un appel API par jour ; 'inactive' = un seul
+        appel sur toute la plage since/until.
+
+    - name: metrics
+      kind: array
+      label: Metrics
+      description: >
+        Liste des métriques (et de leurs breakdowns) à extraire. Chaque
+        entrée peut surcharger start_date/days_to_subtract/period/timeframe/
+        metric_type/generate_dates_range. Obligatoire.
+
+    settings_group_validation:
+    - [access_token, ig_user_id, metrics]
+
+    config:
+      access_token: $TAP_INSTAGRAM_USER_ACCESS_TOKEN
+      ig_user_id: "17841442069516211"
+      days_to_subtract: 0
+      period: day
+      metric_type: total_value
+      generate_dates_range: active
+      metrics:
+      - metric: views
+        breakdowns:
+        - "follow_type,media_product_type"
+        - "follow_type"
+        - "media_product_type"
+      - metric: reach
+        breakdowns:
+        - ""
+
+  loaders:
+  # Settings déjà définis sur MeltanoHub pour ce variant, pas besoin de les
+  # redéclarer ici : https://hub.meltano.com/loaders/target-postgres--transferwise
+  - name: target-postgres
+    variant: transferwise
+    pip_url: pipelinewise-target-postgres
+
+    config:
+      host: localhost
+      port: 5432
+      user: admin
+      password: $TARGET_POSTGRES_PASSWORD
+      dbname: my_database
+      default_target_schema: public
+      add_metadata_columns: true
+
+  - name: target-jsonl
+    variant: andyh1203
+    pip_url: target-jsonl
