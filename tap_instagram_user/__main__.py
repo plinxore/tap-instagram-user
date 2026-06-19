@@ -1,4 +1,4 @@
-"""Point d'entrée pour tap-instagram-user."""
+"""Entry point for tap-instagram-user."""
 
 from __future__ import annotations
 

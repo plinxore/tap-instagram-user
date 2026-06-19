@@ -15,11 +15,11 @@ else:
 
 
 class TapInstagramUser(Tap):
-    """Extracteur personnalisé pour l'API Meta (Instagram Insights)."""
-    
+    """Custom extractor for the Meta API (Instagram Insights)."""
+
     name = "tap-instagram-user"
-    # Nom du package PyPI réellement installé (différent de `name` ci-dessus),
-    # nécessaire pour que get_plugin_version() résolve la bonne version.
+    # Name of the actually installed PyPI package (different from `name`
+    # above), required for get_plugin_version() to resolve the right version.
     package_name = "plinxore-tap-instagram-user"
 
     config_jsonschema = th.PropertiesList(
@@ -27,24 +27,24 @@ class TapInstagramUser(Tap):
             "access_token",
             th.StringType,
             required=True,
-            secret=True, # Masque le token dans les logs
-            description="Le Long-Lived Token du client"
+            secret=True,  # Masks the token in logs
+            description="The client's Long-Lived Token"
         ),
         th.Property(
             "ig_user_id",
             th.StringType,
             required=True,
-            description="L'ID du compte Instagram professionnel"
+            description="The professional Instagram account ID"
         ),
         th.Property(
             "start_date",
             th.DateTimeType,
             description=(
-                "Valeur par défaut de 'start_date' pour toutes les métriques en cas "
-                "de première extraction (ignorée dès qu'un bookmark existe). "
-                "Surchageable par entrée dans `metrics` (ex: 2026-05-01T00:00:00Z). "
-                "Si absente, valeur par défaut calculée automatiquement : le 1er du "
-                "mois en cours moins 12 mois."
+                "Default 'start_date' for all metrics on first extraction "
+                "(ignored once a bookmark exists). Overridable per entry in "
+                "`metrics` (e.g. 2026-05-01T00:00:00Z). If absent, a default "
+                "value is computed automatically: the 1st of the current "
+                "month minus 12 months."
             ),
         ),
         th.Property(
@@ -52,11 +52,11 @@ class TapInstagramUser(Tap):
             th.IntegerType,
             default=0,
             description=(
-                "Valeur par défaut du nombre de jours déjà couverts à ré-extraire à "
-                "chaque run, en plus des jours réellement nouveaux (fenêtre de "
-                "chevauchement, utile car les insights Meta peuvent encore se "
-                "corriger plusieurs jours après leur première extraction). "
-                "0 = pas de ré-extraction. Surchageable par entrée dans `metrics`."
+                "Default number of already-covered days to re-extract on "
+                "each run, in addition to genuinely new days (overlap "
+                "window, useful because Meta insights can still be "
+                "corrected after their first extraction). 0 = no "
+                "re-extraction. Overridable per entry in `metrics`."
             ),
         ),
         th.Property(
@@ -64,16 +64,16 @@ class TapInstagramUser(Tap):
             th.StringType,
             default="day",
             description=(
-                "Valeur par défaut de la granularité demandée à l'API Meta Insights "
-                "(paramètre `period`). Surchageable par entrée dans `metrics`."
+                "Default granularity requested from the Meta Insights API "
+                "(`period` parameter). Overridable per entry in `metrics`."
             ),
         ),
         th.Property(
             "timeframe",
             th.StringType,
             description=(
-                "Valeur par défaut du paramètre `timeframe` optionnel transmis à "
-                "l'API Meta Insights. Surchageable par entrée dans `metrics`."
+                "Default optional `timeframe` parameter passed to the Meta "
+                "Insights API. Overridable per entry in `metrics`."
             ),
         ),
         th.Property(
@@ -81,8 +81,9 @@ class TapInstagramUser(Tap):
             th.StringType,
             default="total_value",
             description=(
-                "Valeur par défaut du paramètre `metric_type` transmis à l'API Meta "
-                "Insights pour chaque métrique. Surchageable par entrée dans `metrics`."
+                "Default `metric_type` parameter passed to the Meta "
+                "Insights API for each metric. Overridable per entry in "
+                "`metrics`."
             ),
         ),
         th.Property(
@@ -91,11 +92,11 @@ class TapInstagramUser(Tap):
             default="active",
             allowed_values=["active", "inactive"],
             description=(
-                "'active' (défaut) : un appel API par jour (since/until = 1 jour). "
-                "'inactive' : un seul appel couvrant toute la plage since/until "
-                "(moins d'appels API, mais perd la granularité jour par jour selon "
-                "ce que renvoie l'API pour la métrique). Surchageable par entrée "
-                "dans `metrics`."
+                "'active' (default): one API call per day (since/until = "
+                "1 day). 'inactive': a single call covering the whole "
+                "since/until range (fewer API calls, but loses day-by-day "
+                "granularity depending on what the API returns for the "
+                "metric). Overridable per entry in `metrics`."
             ),
         ),
         th.Property(
@@ -106,57 +107,57 @@ class TapInstagramUser(Tap):
                         "metric",
                         th.StringType,
                         required=True,
-                        description="Nom de la métrique Meta Insights (ex: views, reach, impressions).",
+                        description="Meta Insights metric name (e.g. views, reach, impressions).",
                     ),
                     th.Property(
                         "breakdowns",
                         th.ArrayType(th.StringType),
                         description=(
-                            "Breakdowns à extraire pour cette métrique. Une chaîne "
-                            "vide génère un stream sans breakdown."
+                            "Breakdowns to extract for this metric. An empty "
+                            "string generates a stream with no breakdown."
                         ),
                     ),
                     th.Property(
                         "start_date",
                         th.DateTimeType,
-                        description="Surcharge 'start_date' pour cette métrique uniquement.",
+                        description="Overrides 'start_date' for this metric only.",
                     ),
                     th.Property(
                         "days_to_subtract",
                         th.IntegerType,
-                        description="Surcharge 'days_to_subtract' pour cette métrique uniquement.",
+                        description="Overrides 'days_to_subtract' for this metric only.",
                     ),
                     th.Property(
                         "period",
                         th.StringType,
-                        description="Surcharge 'period' pour cette métrique uniquement.",
+                        description="Overrides 'period' for this metric only.",
                     ),
                     th.Property(
                         "timeframe",
                         th.StringType,
-                        description="Surcharge 'timeframe' pour cette métrique uniquement.",
+                        description="Overrides 'timeframe' for this metric only.",
                     ),
                     th.Property(
                         "metric_type",
                         th.StringType,
-                        description="Surcharge 'metric_type' pour cette métrique uniquement.",
+                        description="Overrides 'metric_type' for this metric only.",
                     ),
                     th.Property(
                         "generate_dates_range",
                         th.StringType,
                         allowed_values=["active", "inactive"],
-                        description="Surcharge 'generate_dates_range' pour cette métrique uniquement.",
+                        description="Overrides 'generate_dates_range' for this metric only.",
                     ),
                 )
             ),
             required=True,
             description=(
-                "Liste des métriques (et de leurs breakdowns) à extraire, un stream "
-                "étant généré par combinaison métrique/breakdown. Chaque entrée peut "
-                "surcharger start_date/days_to_subtract/period/timeframe/metric_type/"
-                "generate_dates_range pour elle-même ; sinon la valeur globale "
-                "ci-dessus s'applique. "
-                "Obligatoire : aucune valeur par défaut."
+                "List of metrics (and their breakdowns) to extract; one "
+                "stream is generated per metric/breakdown combination. Each "
+                "entry may override start_date/days_to_subtract/period/"
+                "timeframe/metric_type/generate_dates_range for itself; "
+                "otherwise the global value above applies. "
+                "Required: no default value."
             ),
         ),
     ).to_dict()
@@ -164,28 +165,28 @@ class TapInstagramUser(Tap):
 
     @override
     def discover_streams(self) -> List[Stream]:
-        """Retourne la liste des flux (tables) à extraire."""
-        
+        """Return the list of streams (tables) to extract."""
+
         streams: List[Stream] = []
 
-        # "metrics" est obligatoire (cf. config_jsonschema) : la validation du
-        # tap échoue avant même d'arriver ici si elle est absente.
+        # "metrics" is required (cf. config_jsonschema): tap validation fails
+        # before this point is even reached if it's absent.
         metrics_config = self.config["metrics"]
 
         for entry in metrics_config:
             metric = entry["metric"]
             breakdowns = entry.get("breakdowns") or [""]
             for breakdown in breakdowns:
-                # Nom de table SQL-friendly (sans virgule).
+                # SQL-friendly table name (no comma).
                 if breakdown:
                     safe_breakdown = breakdown.replace(",", "_and_")
                     stream_name = f"ig_{metric}_by_{safe_breakdown}"
                 else:
                     stream_name = f"ig_{metric}_base"
 
-                # Les surcharges éventuelles de cette entrée `metrics` sont
-                # propagées au stream (None si absentes, auquel cas get_param()
-                # retombe sur la valeur globale du tap).
+                # Any overrides on this `metrics` entry are propagated to the
+                # stream (None if absent, in which case get_param() falls
+                # back to the tap's global value).
                 stream = MetaRawInsightsStream(
                     tap=self,
                     name=stream_name,
@@ -198,9 +199,9 @@ class TapInstagramUser(Tap):
                     metric_type=entry.get("metric_type"),
                     generate_dates_range=entry.get("generate_dates_range"),
                 )
-                
+
                 streams.append(stream)
-                
+
         return streams
 
 

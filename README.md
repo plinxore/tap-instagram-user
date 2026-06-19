@@ -1,8 +1,8 @@
 # tap-instagram-user
 
-`tap-instagram-user` est un tap Singer pour l'API Meta Graph (Instagram Insights), construit avec le [Meltano Singer SDK](https://sdk.meltano.com).
+`tap-instagram-user` is a Singer tap for the Meta Graph API (Instagram Insights), built with the [Meltano Singer SDK](https://sdk.meltano.com).
 
-Il extrait les métriques d'insights Instagram (`views`, `reach`, `impressions`, ...) jour par jour, avec une stratégie ELT : aucune transformation métier n'est appliquée côté tap, la réponse brute de l'API est stockée dans une colonne `raw_data` (JSON), aux côtés de métadonnées (`ig_user_id`, `metric_name`, `breakdown_type`, `metric_date`, `extraction_date`).
+It extracts Instagram insights metrics (`views`, `reach`, `impressions`, ...) day by day, following an ELT strategy: no business transformation is applied by the tap, the raw API response is stored in a `raw_data` column (JSON), alongside metadata (`ig_user_id`, `metric_name`, `breakdown_type`, `metric_date`, `extraction_date`).
 
 ## Installation
 
@@ -12,23 +12,23 @@ uv sync
 
 ## Configuration
 
-### Paramètres principaux
+### Main settings
 
-| Paramètre | Obligatoire | Description |
+| Setting | Required | Description |
 |---|---|---|
-| `access_token` | oui | Long-Lived Token Meta du compte Instagram professionnel |
-| `ig_user_id` | oui | ID du compte Instagram professionnel |
-| `metrics` | oui | Liste des métriques (et de leurs breakdowns) à extraire — voir ci-dessous |
-| `start_date` | non | Date de départ en cas de première extraction. Si absente, calculée automatiquement (1er du mois en cours moins 12 mois) |
-| `days_to_subtract` | non (défaut `0`) | Fenêtre de chevauchement : nombre de jours déjà couverts à ré-extraire à chaque run (utile car les insights Meta peuvent encore se corriger après coup) |
-| `period` | non (défaut `"day"`) | Granularité demandée à l'API Meta Insights |
-| `timeframe` | non | Paramètre `timeframe` optionnel transmis à l'API |
-| `metric_type` | non (défaut `"total_value"`) | Paramètre `metric_type` transmis à l'API |
-| `generate_dates_range` | non (défaut `"active"`) | `"active"` = un appel API par jour ; `"inactive"` = un seul appel sur toute la plage |
+| `access_token` | yes | Long-Lived Meta Token for the professional Instagram account |
+| `ig_user_id` | yes | Professional Instagram account ID |
+| `metrics` | yes | List of metrics (and their breakdowns) to extract — see below |
+| `start_date` | no | Start date on first extraction. If absent, computed automatically (1st of the current month minus 12 months) |
+| `days_to_subtract` | no (default `0`) | Overlap window: number of already-covered days to re-extract on each run (useful because Meta insights can still be corrected after the fact) |
+| `period` | no (default `"day"`) | Granularity requested from the Meta Insights API |
+| `timeframe` | no | Optional `timeframe` parameter passed to the API |
+| `metric_type` | no (default `"total_value"`) | `metric_type` parameter passed to the API |
+| `generate_dates_range` | no (default `"active"`) | `"active"` = one API call per day; `"inactive"` = a single call covering the whole range |
 
 ### `metrics`
 
-Chaque entrée définit une métrique et génère un stream par combinaison métrique/breakdown (ex: `views` + `follow_type` → stream `ig_views_by_follow_type`). Une entrée peut surcharger n'importe lequel des paramètres ci-dessus (sauf `access_token`/`ig_user_id`, toujours globaux) pour elle-même uniquement :
+Each entry defines a metric and generates one stream per metric/breakdown combination (e.g. `views` + `follow_type` -> stream `ig_views_by_follow_type`). An entry may override any of the settings above (except `access_token`/`ig_user_id`, always global) for itself only:
 
 ```json
 {
@@ -54,13 +54,13 @@ Chaque entrée définit une métrique et génère un stream par combinaison mét
 }
 ```
 
-Voir [config.template.json](config.template.json) pour un exemple complet.
+See [config.template.json](config.template.json) for a full example.
 
-### Configuration via variables d'environnement
+### Configuration via environment variables
 
-Copier `.env.example` vers `.env` et renseigner les vraies valeurs (jamais commité). Convention Meltano : `<PLUGIN_NAME>_<SETTING_NAME>` en majuscules, ex. `TAP_INSTAGRAM_USER_ACCESS_TOKEN`.
+Copy `.env.example` to `.env` and fill in the real values (never committed). Meltano convention: `<PLUGIN_NAME>_<SETTING_NAME>` in uppercase, e.g. `TAP_INSTAGRAM_USER_ACCESS_TOKEN`.
 
-La liste complète des settings est disponible via :
+The full list of settings is available via:
 
 ```bash
 tap-instagram-user --about
@@ -68,33 +68,33 @@ tap-instagram-user --about
 
 ## Usage
 
-### En CLI direct (sans Meltano)
+### Direct CLI (without Meltano)
 
 ```bash
 tap-instagram-user --config config.json --discover > catalog.json
 tap-instagram-user --config config.json --catalog catalog.json --state state.json
 ```
 
-### Via Meltano (recommandé)
+### Via Meltano (recommended)
 
 ```bash
-# Installer le CLI Meltano (si pas déjà fait)
+# Install the Meltano CLI (if not already done)
 pipx install meltano
 
-# Installer les plugins déclarés dans meltano.yml
+# Install the plugins declared in meltano.yml
 meltano install
 
-# Vérifier la config
+# Check the config
 meltano config tap-instagram-user list
 meltano config test tap-instagram-user
 
-# Lancer le pipeline (extraction -> chargement Postgres)
+# Run the pipeline (extract -> load into Postgres)
 meltano run tap-instagram-user target-postgres
 ```
 
-Meltano gère automatiquement l'état (bookmarks) entre les runs via sa propre base système — pas besoin de manipuler de fichier `state.json` manuellement.
+Meltano automatically manages state (bookmarks) between runs via its own system database — no need to manually handle a `state.json` file.
 
-## Développement
+## Development
 
 ### Tests
 
@@ -102,14 +102,14 @@ Meltano gère automatiquement l'état (bookmarks) entre les runs via sa propre b
 uv run pytest
 ```
 
-### Détails d'implémentation notables
+### Notable implementation details
 
-- **Bookmark** : basé sur le `until` de chaque partition jour, plafonné pour ne jamais régresser (notamment lors de la consolidation du 1er du mois). Un seul bookmark par stream (`state_partitioning_keys = []`), pas un par partition.
-- **Primary key** : inclut `metric_date` (le jour des données) en plus de `ig_user_id`/`metric_name`/`breakdown_type`, pour éviter qu'un upsert côté target n'écrase les données d'un autre jour.
-- **Consolidation mensuelle** : au 1er du mois, le tap ré-extrait automatiquement l'avant-dernier mois en entier (les insights Meta peuvent encore se corriger après publication).
+- **Bookmark**: based on each day partition's `until`, capped so it never regresses (notably during the monthly consolidation). A single bookmark per stream (`state_partitioning_keys = []`), not one per partition.
+- **Primary key**: includes `metric_date` (the day the data is for) in addition to `ig_user_id`/`metric_name`/`breakdown_type`, to prevent an upsert on the target side from overwriting another day's data.
+- **Monthly consolidation**: on the 1st of the month, the tap automatically re-extracts the entire month before last (Meta insights can still be corrected after publication).
 
-Voir le code dans [tap_instagram_user/streams.py](tap_instagram_user/streams.py) et [tap_instagram_user/client.py](tap_instagram_user/client.py) pour le détail.
+See the code in [tap_instagram_user/streams.py](tap_instagram_user/streams.py) and [tap_instagram_user/client.py](tap_instagram_user/client.py) for details.
 
 ### SDK Dev Guide
 
-Voir le [guide de développement du SDK](https://sdk.meltano.com/en/latest/dev_guide.html) pour plus d'informations sur le Meltano Singer SDK.
+See the [Meltano Singer SDK dev guide](https://sdk.meltano.com/en/latest/dev_guide.html) for more information.

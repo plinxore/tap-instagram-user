@@ -20,52 +20,52 @@ plugins:
     settings:
     - name: access_token
       label: Access Token
-      description: Le Long-Lived Token du client Meta
+      description: The Meta client's Long-Lived Token
       kind: password
       sensitive: true
 
     - name: ig_user_id
       label: Instagram User ID
-      description: L'ID du compte Instagram professionnel
+      description: The professional Instagram account ID
 
     - name: start_date
       kind: date_iso8601
       label: Start Date
       description: >
-        Date de départ en cas de première extraction (ignorée dès qu'un
-        bookmark existe). Si absente, calculée automatiquement (1er du mois
-        en cours moins 12 mois).
+        Start date on first extraction (ignored once a bookmark exists). If
+        absent, computed automatically (1st of the current month minus 12
+        months).
 
     - name: days_to_subtract
       kind: integer
       label: Days To Subtract
-      description: Fenêtre de chevauchement (jours déjà couverts à ré-extraire à chaque run)
+      description: Overlap window (already-covered days to re-extract on each run)
 
     - name: period
       label: Period
-      description: Granularité demandée à l'API Meta Insights (paramètre `period`)
+      description: Granularity requested from the Meta Insights API (`period` parameter)
 
     - name: timeframe
       label: Timeframe
-      description: Paramètre `timeframe` optionnel transmis à l'API Meta Insights
+      description: Optional `timeframe` parameter passed to the Meta Insights API
 
     - name: metric_type
       label: Metric Type
-      description: Paramètre `metric_type` transmis à l'API Meta Insights
+      description: The `metric_type` parameter passed to the Meta Insights API
 
     - name: generate_dates_range
       label: Generate Dates Range
       description: >
-        'active' (défaut) = un appel API par jour ; 'inactive' = un seul
-        appel sur toute la plage since/until.
+        'active' (default) = one API call per day; 'inactive' = a single
+        call covering the whole since/until range.
 
     - name: metrics
       kind: array
       label: Metrics
       description: >
-        Liste des métriques (et de leurs breakdowns) à extraire. Chaque
-        entrée peut surcharger start_date/days_to_subtract/period/timeframe/
-        metric_type/generate_dates_range. Obligatoire.
+        List of metrics (and their breakdowns) to extract. Each entry may
+        override start_date/days_to_subtract/period/timeframe/metric_type/
+        generate_dates_range. Required.
 
     settings_group_validation:
     - [access_token, ig_user_id, metrics]
@@ -88,8 +88,8 @@ plugins:
         - ""
 
   loaders:
-  # Settings déjà définis sur MeltanoHub pour ce variant, pas besoin de les
-  # redéclarer ici : https://hub.meltano.com/loaders/target-postgres--transferwise
+  # Settings already defined on MeltanoHub for this variant, no need to
+  # redeclare them here: https://hub.meltano.com/loaders/target-postgres--transferwise
   - name: target-postgres
     variant: transferwise
     pip_url: pipelinewise-target-postgres
