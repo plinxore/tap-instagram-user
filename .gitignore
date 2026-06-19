@@ -137,4 +137,7 @@ dmypy.json
 
 # Claude Code local settings (machine-specific)
 .claude/settings.local.json
+
+# Draft files for the MeltanoHub submission (not part of this tap's codebase)
+hub-submission/
 .claude/
