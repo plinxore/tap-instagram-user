@@ -114,7 +114,15 @@ allow-star-arg-any = true
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
-  "S101",  # assert is used by pytest
+  "S101",     # assert is used by pytest
+  "S105",     # fake tokens live in test config, not real secrets
+  "D",        # docstrings are optional in tests (names are self-describing)
+  "ANN",      # full type annotations are optional in tests
+  "ARG",      # unused args occur in fixtures and lambda stubs
+  "SLF001",   # tests legitimately exercise private members
+  "PLR2004",  # magic values are fine in assertions
+  "PLC0415",  # local imports are fine in tests
+  "FBT",      # boolean positional args are fine in test helpers
 ]
 
 [tool.ruff.lint.pydocstyle]
