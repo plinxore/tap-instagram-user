@@ -90,6 +90,9 @@ filterwarnings = [
     "error",
     "once:No records were available to test:UserWarning",
     "once:Fields in transformed catalog but not in records:UserWarning",
+    # singer-sdk emits an end-of-life warning on Python 3.10 (still supported
+    # until 2026-10); don't let it fail the suite.
+    "ignore:Python 3.10 will reach its end of life",
 ]
 log_level = "INFO"
 minversion = "9"
