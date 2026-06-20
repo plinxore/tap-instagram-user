@@ -1,6 +1,8 @@
 # tap-instagram-user
 
-`tap-instagram-user` is a Singer tap for the Meta Graph API (Instagram Insights), built with the [Meltano Singer SDK](https://sdk.meltano.com).
+`tap-instagram-user` is a Singer tap for the Meta Graph API (Instagram): account-level (user) insights **and** media (posts) with their per-post insights, built with the [Meltano Singer SDK](https://sdk.meltano.com).
+
+> **About the name:** despite the `-user` suffix (the tap started with the IG User node), it covers multiple Instagram Graph nodes — currently the **User** node (account insights) and the **Media** node (posts + per-post insights) — and is structured to add more.
 
 It extracts Instagram insights metrics (`views`, `reach`, `impressions`, ...) day by day, following an ELT strategy: no business transformation is applied by the tap, the raw API response is stored in a `raw_data` column (JSON), alongside metadata (`ig_user_id`, `metric_name`, `breakdown_type`, `metric_date`, `extraction_date`).
 
