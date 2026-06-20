@@ -32,3 +32,27 @@ jobs:
 
       - name: Run tests
         run: python -m pytest -v
+
+  lint:
+    name: Lint & type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the tap and lint dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . ruff mypy "singer-sdk[testing]" "types-python-dateutil~=2.9"
+
+      - name: Ruff
+        run: python -m ruff check .
+
+      - name: Mypy
+        run: python -m mypy tap_instagram_user/

@@ -1,16 +1,15 @@
 """InstagramUser tap class."""
 
 import sys
-from typing import List
 
-from singer_sdk import Tap, Stream
+from singer_sdk import Stream, Tap
 from singer_sdk import typing as th
 from singer_sdk.exceptions import ConfigurationError
 
 from tap_instagram_user.streams import (
-    MetaRawInsightsStream,
-    MediaStream,
     MediaInsightsStream,
+    MediaStream,
+    MetaRawInsightsStream,
 )
 
 if sys.version_info >= (3, 12):
@@ -200,7 +199,10 @@ class TapInstagramUser(Tap):
                         "metric",
                         th.StringType,
                         required=True,
-                        description="Media insights metric name (e.g. reach, views, profile_activity).",
+                        description=(
+                            "Media insights metric name "
+                            "(e.g. reach, views, profile_activity)."
+                        ),
                     ),
                     th.Property(
                         "breakdowns",
@@ -236,10 +238,9 @@ class TapInstagramUser(Tap):
 
 
     @override
-    def discover_streams(self) -> List[Stream]:
+    def discover_streams(self) -> list[Stream]:
         """Return the list of streams (tables) to extract."""
-
-        streams: List[Stream] = []
+        streams: list[Stream] = []
 
         # "metrics" is required (cf. config_jsonschema): tap validation fails
         # before this point is even reached if it's absent.

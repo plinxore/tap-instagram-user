@@ -1,15 +1,17 @@
 """Stream type classes for tap-instagram-user."""
-from datetime import date, timedelta, datetime, timezone
-from dateutil.relativedelta import relativedelta
+from collections.abc import Iterable
+from datetime import date, datetime, timedelta, timezone
+from typing import Any
 
-from typing import Any, Iterable, Optional
 import requests
-
+from dateutil.relativedelta import relativedelta
 from singer_sdk import typing as th
-from singer_sdk.pagination import BaseAPIPaginator
 from singer_sdk.exceptions import ConfigurationError
+from singer_sdk.helpers.types import Context
+from singer_sdk.pagination import BaseAPIPaginator
 
 from tap_instagram_user.client import InstagramUserStream
+
 
 class MetaRawInsightsStream(InstagramUserStream):
     """Generic stream for extracting any Instagram metric."""
@@ -107,8 +109,12 @@ class MetaRawInsightsStream(InstagramUserStream):
         # start of every month.
         if last_date_executes.day == 1:
             self.logger.info("Start of month: consolidating the month before last.")
-            first_day_in_2_last_month = (last_date_executes - relativedelta(months=2)).replace(day=1)
-            last_day_in_2_last_month = first_day_in_2_last_month + relativedelta(months=1) - timedelta(days=1)
+            first_day_in_2_last_month = (
+                last_date_executes - relativedelta(months=2)
+            ).replace(day=1)
+            last_day_in_2_last_month = (
+                first_day_in_2_last_month + relativedelta(months=1) - timedelta(days=1)
+            )
 
             partitions.extend(self._build_range_partitions(
                 first_day_in_2_last_month, last_day_in_2_last_month, day_by_day,
@@ -142,15 +148,15 @@ class MetaRawInsightsStream(InstagramUserStream):
         tap: Any,
         name: str,
         metric_name: str,
-        breakdown: Optional[str] = None,
-        start_date: Optional[str] = None,
-        days_to_subtract: Optional[int] = None,
-        period: Optional[str] = None,
-        timeframe: Optional[str] = None,
-        metric_type: Optional[str] = None,
-        generate_dates_range: Optional[str] = None,
-        **kwargs
-    ):
+        breakdown: str | None = None,
+        start_date: str | None = None,
+        days_to_subtract: int | None = None,
+        period: str | None = None,
+        timeframe: str | None = None,
+        metric_type: str | None = None,
+        generate_dates_range: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Dynamic stream initialization.
 
         `start_date`, `days_to_subtract`, `period`, `timeframe`,
@@ -172,7 +178,7 @@ class MetaRawInsightsStream(InstagramUserStream):
 
         self.path = f"/{self.config.get('ig_user_id')}/insights"
 
-    def get_records(self, context: Optional[dict]) -> Iterable[dict]:
+    def get_records(self, context: Context | None) -> Iterable[dict]:
         """No partition to process = no API call.
 
         `partitions` returns [] when there's nothing to extract (already ran
@@ -204,7 +210,7 @@ class MetaRawInsightsStream(InstagramUserStream):
         yield {
             "ig_user_id": self.config.get("ig_user_id"),
             "metric_name": self.metric_name,
-            "breakdown_type": self.breakdown if self.breakdown else "none",
+            "breakdown_type": self.breakdown or "none",
             "metric_date": current_since.date().isoformat() if current_since else None,
             "extraction_date": bookmark_value.isoformat(),  # The value the SDK will persist
             "raw_data": response.json()
@@ -219,11 +225,13 @@ class InstagramMediaPaginator(BaseAPIPaginator):
     fetched (safety cap against an unbounded pagination loop).
     """
 
-    def __init__(self, max_pages: int):
+    def __init__(self, max_pages: int) -> None:
+        """Store the page cap; pagination starts with no cursor."""
         super().__init__(None)
         self._max_pages = max_pages
 
-    def get_next(self, response: requests.Response) -> Optional[str]:
+    def get_next(self, response: requests.Response) -> str | None:
+        """Return the next `after` cursor, or None to stop."""
         # `count` is the number of pages already fetched beyond the first;
         # once it reaches max_pages - 1 the cap is hit.
         if self.count >= self._max_pages - 1:
@@ -261,17 +269,16 @@ class MediaStream(InstagramUserStream):
         ),
     ).to_dict()
 
-    @property
-    def path(self) -> str:
-        """Media edge of the configured Instagram user."""
-        return f"/{self.config.get('ig_user_id')}/media"
+    # Media edge of the configured user. `{ig_user_id}` is resolved by the SDK
+    # from config when building the URL (cf. RESTStream.get_url).
+    path = "/{ig_user_id}/media"
 
     def get_new_paginator(self) -> BaseAPIPaginator:
         """Cursor paginator capped at `media_max_pages`."""
         return InstagramMediaPaginator(self.get_param("media_max_pages", 100))
 
     def get_url_params(
-        self, context: Optional[dict], next_page_token: Optional[Any]
+        self, context: Context | None, next_page_token: Any | None
     ) -> dict:
         """Build the `/media` query string.
 
@@ -289,7 +296,7 @@ class MediaStream(InstagramUserStream):
             params["after"] = next_page_token
         return params
 
-    def get_records(self, context: Optional[dict]) -> Iterable[dict]:
+    def get_records(self, context: Context | None) -> Iterable[dict]:
         """Skip the run entirely if the snapshot was already taken today.
 
         `ig_media` is a once-a-day snapshot; re-running on the same day would
@@ -304,7 +311,7 @@ class MediaStream(InstagramUserStream):
         self._extraction_date = datetime.now(timezone.utc).isoformat()
         yield from super().get_records(context)
 
-    def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
+    def post_process(self, row: dict, context: Context | None = None) -> dict:
         """Wrap each raw post with its metadata, without transformation."""
         return {
             "ig_user_id": self.config.get("ig_user_id"),
@@ -313,7 +320,7 @@ class MediaStream(InstagramUserStream):
             "raw_data": row,
         }
 
-    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+    def get_child_context(self, record: dict, context: Context | None) -> dict:
         """Pass each post's id and product type down to the insights child.
 
         `media_product_type` comes straight from the `/media` response (it is
@@ -327,7 +334,7 @@ class MediaStream(InstagramUserStream):
         }
 
 
-class _SkipMedia(Exception):
+class _SkipMediaError(Exception):
     """Internal sentinel: skip the current post without failing the run."""
 
 
@@ -369,15 +376,16 @@ class MediaInsightsStream(InstagramUserStream):
         tap: Any,
         name: str,
         metric_name: str,
-        breakdown: Optional[str] = None,
-        **kwargs
-    ):
+        breakdown: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Bind the metric and (optional) breakdown this child stream extracts."""
         super().__init__(tap=tap, name=name, **kwargs)
         self.metric_name = metric_name
         self.breakdown = breakdown
 
     def get_url_params(
-        self, context: Optional[dict], next_page_token: Optional[Any]
+        self, context: Context | None, next_page_token: Any | None
     ) -> dict:
         """Build the per-post insights query string.
 
@@ -392,7 +400,7 @@ class MediaInsightsStream(InstagramUserStream):
             params["breakdown"] = self.breakdown
         return params
 
-    def get_records(self, context: Optional[dict]) -> Iterable[dict]:
+    def get_records(self, context: Context | None) -> Iterable[dict]:
         """Filter by media_product_type, then extract; skip expected per-post errors."""
         post_type = (context or {}).get("media_product_type")
         if post_type is None:
@@ -401,7 +409,7 @@ class MediaInsightsStream(InstagramUserStream):
             raise RuntimeError(
                 "media_product_type is required in 'media_fields' for media "
                 "insights to work (it determines which metrics are valid per "
-                f"post). Post {context.get('id_post') if context else '?'} has none."
+                f"post). Post {(context or {}).get('id_post', '?')} has none."
             )
 
         # Compatibility filtering: only call the API if this metric is declared
@@ -415,9 +423,9 @@ class MediaInsightsStream(InstagramUserStream):
 
         try:
             yield from super().get_records(context)
-        except _SkipMedia:
+        except _SkipMediaError:
             self.logger.info(
-                f"Skipping post {context.get('id_post')} for metric "
+                f"Skipping post {(context or {}).get('id_post')} for metric "
                 f"'{self.metric_name}': media posted before business account "
                 "conversion."
             )
@@ -444,16 +452,16 @@ class MediaInsightsStream(InstagramUserStream):
                     f"valid for this media_product_type). Meta said: {text}"
                 )
             if "Media Posted Before Business Account Conversion" in text:
-                raise _SkipMedia()
+                raise _SkipMediaError
         super().validate_response(response)
 
-    def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
+    def post_process(self, row: dict, context: Context | None = None) -> dict:
         """Wrap the raw insights response with its metadata, without transformation."""
         return {
             "ig_user_id": self.config.get("ig_user_id"),
-            "id_post": context["id_post"],
+            "id_post": (context or {}).get("id_post"),
             "metric_name": self.metric_name,
-            "breakdown_type": self.breakdown if self.breakdown else "none",
+            "breakdown_type": self.breakdown or "none",
             "extraction_date": self._extraction_date,
             "raw_data": row,
         }

@@ -57,6 +57,7 @@ test = [
 typing = [
     "mypy>=2.1",
     "ty>=0.0.41",
+    "types-python-dateutil~=2.9",
 ]
 [tool.hatch.build.targets.wheel]
 packages = [
@@ -108,7 +109,22 @@ required-version = ">=0.15"
 [tool.ruff.lint]
 future-annotations = true
 ignore = [
-    "COM812",  # missing-trailing-comma
+    "COM812",   # missing-trailing-comma (conflicts with the formatter)
+    # Conventions that don't fit a Singer SDK tap:
+    "ANN401",   # `Any` is unavoidable on SDK-facing signatures (tap, kwargs, tokens)
+    "RUF012",   # SDK class attributes (primary_keys, schema, ...) aren't ClassVar
+    "ARG002",   # overridden SDK methods keep mandated but unused params (context, ...)
+    "TRY003",   # long, explicit error messages are clearer than custom exceptions
+    "EM101",    # ditto: string literals passed straight to exceptions
+    "EM102",    # ditto: f-strings passed straight to exceptions
+    "G004",     # f-strings in log messages are intentional and readable
+    "DTZ011",   # date.today() is deliberate (date-only daily-window logic)
+    "TC002",    # not worth splitting runtime imports into TYPE_CHECKING blocks
+    "TC003",    # idem for stdlib imports
+    "PLR0913",  # the per-metric override constructor legitimately takes many args
+    "PLR2004",  # comparing against an HTTP status literal (400) is self-evident
+    "FBT001",   # internal helper takes a positional bool by design
+    "C901",     # the core partition/discovery logic is irreducibly branchy
 ]
 select = ["ALL"]
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tap_instagram_user.streams import InstagramMediaPaginator, _SkipMedia
+from tap_instagram_user.streams import InstagramMediaPaginator, _SkipMediaError
 from tests.conftest import (
     FakeResponse,
     make_tap,
@@ -109,7 +109,7 @@ def test_validate_response_skips_pre_conversion_media() -> None:
         status_code=400,
         text="(#10) Media Posted Before Business Account Conversion",
     )
-    with pytest.raises(_SkipMedia):
+    with pytest.raises(_SkipMediaError):
         stream.validate_response(resp)
 
 

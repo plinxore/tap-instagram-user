@@ -1,9 +1,11 @@
 """REST client handling, including InstagramUserStream base class."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+from typing import Any
 
-from typing import Any, Dict, Optional
+from singer_sdk.helpers.types import Context
 from singer_sdk.streams import RESTStream
+
 
 class InstagramUserStream(RESTStream):
     """Base class handling the connection to the Meta Graph API.
@@ -30,8 +32,8 @@ class InstagramUserStream(RESTStream):
         return self.config.get(name, default)
 
     def get_url_params(
-        self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Dict[str, Any]:
+        self, context: Context | None, next_page_token: Any | None
+    ) -> dict[str, Any]:
         """Build the request parameters (querystring) for the Meta API."""
         params: dict = {}
 
