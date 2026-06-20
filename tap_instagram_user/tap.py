@@ -5,8 +5,13 @@ from typing import List
 
 from singer_sdk import Tap, Stream
 from singer_sdk import typing as th
+from singer_sdk.exceptions import ConfigurationError
 
-from tap_instagram_user.streams import MetaRawInsightsStream
+from tap_instagram_user.streams import (
+    MetaRawInsightsStream,
+    MediaStream,
+    MediaInsightsStream,
+)
 
 if sys.version_info >= (3, 12):
     from typing import override
@@ -160,6 +165,73 @@ class TapInstagramUser(Tap):
                 "Required: no default value."
             ),
         ),
+        th.Property(
+            "media_fields",
+            th.ArrayType(th.StringType),
+            description=(
+                "Fields to request on the `/media` edge for the `ig_media` "
+                "stream (e.g. id, timestamp, media_type, media_product_type, "
+                "like_count). No in-code default: this is a Meta-controlled "
+                "vocabulary, so it must be supplied explicitly. Required to "
+                "enable media extraction. `media_product_type` must be "
+                "included for the media-insights child streams to work."
+            ),
+        ),
+        th.Property(
+            "media_limit",
+            th.IntegerType,
+            default=100,
+            description="Page size (`limit`) for the `/media` edge.",
+        ),
+        th.Property(
+            "media_max_pages",
+            th.IntegerType,
+            default=100,
+            description=(
+                "Maximum number of pages to fetch from the `/media` edge "
+                "(safety cap against an unbounded pagination loop)."
+            ),
+        ),
+        th.Property(
+            "media_metrics",
+            th.ArrayType(
+                th.ObjectType(
+                    th.Property(
+                        "metric",
+                        th.StringType,
+                        required=True,
+                        description="Media insights metric name (e.g. reach, views, profile_activity).",
+                    ),
+                    th.Property(
+                        "breakdowns",
+                        th.ArrayType(th.StringType),
+                        description=(
+                            "Breakdowns for this metric (e.g. action_type for "
+                            "profile_activity, story_navigation_action_type for "
+                            "navigation). An empty string generates a stream "
+                            "with no breakdown."
+                        ),
+                    ),
+                )
+            ),
+            description=(
+                "List of per-post insight metrics to extract; one "
+                "`ig_media_<metric>` stream is generated per metric/breakdown "
+                "combination. Requires `media_fields` and "
+                "`media_metric_compatibility`."
+            ),
+        ),
+        th.Property(
+            "media_metric_compatibility",
+            th.ObjectType(additional_properties=th.ArrayType(th.StringType)),
+            description=(
+                "Maps each media_product_type (e.g. FEED, REELS, STORY) to the "
+                "list of metrics valid for it. Used to avoid requesting a "
+                "metric on a post type Meta does not support. No in-code "
+                "default: this is a Meta-controlled vocabulary and must be "
+                "supplied explicitly. Required when `media_metrics` is set."
+            ),
+        ),
     ).to_dict()
 
 
@@ -201,6 +273,46 @@ class TapInstagramUser(Tap):
                 )
 
                 streams.append(stream)
+
+        # Media extraction is optional: the `ig_media` stream is only
+        # discovered when `media_fields` is configured, so user-insights-only
+        # setups are unaffected.
+        if self.config.get("media_fields"):
+            streams.append(MediaStream(tap=self, name="ig_media"))
+
+        # Per-post insight children. Conditionally required (cf. the
+        # no-hardcoded-vocab rule): if `media_metrics` is set, both
+        # `media_fields` (for the parent) and `media_metric_compatibility`
+        # (for filtering) must be present too.
+        media_metrics = self.config.get("media_metrics")
+        if media_metrics:
+            if not self.config.get("media_fields"):
+                raise ConfigurationError(
+                    "'media_metrics' requires 'media_fields' (the ig_media "
+                    "parent stream must be enabled to provide post ids)."
+                )
+            if not self.config.get("media_metric_compatibility"):
+                raise ConfigurationError(
+                    "'media_metrics' requires 'media_metric_compatibility' "
+                    "(maps each media_product_type to its valid metrics)."
+                )
+
+            for entry in media_metrics:
+                metric = entry["metric"]
+                breakdowns = entry.get("breakdowns") or [""]
+                for breakdown in breakdowns:
+                    if breakdown:
+                        safe_breakdown = breakdown.replace(",", "_and_")
+                        stream_name = f"ig_media_{metric}_by_{safe_breakdown}"
+                    else:
+                        stream_name = f"ig_media_{metric}"
+
+                    streams.append(MediaInsightsStream(
+                        tap=self,
+                        name=stream_name,
+                        metric_name=metric,
+                        breakdown=breakdown,
+                    ))
 
         return streams
 

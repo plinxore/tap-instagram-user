@@ -67,8 +67,53 @@ plugins:
         override start_date/days_to_subtract/period/timeframe/metric_type/
         generate_dates_range. Required.
 
+    - name: media_fields
+      kind: array
+      label: Media Fields
+      description: >
+        Fields to request on the `/media` edge for the `ig_media` stream
+        (must include media_product_type for the insights children). No
+        default; required to enable media extraction.
+
+    - name: media_limit
+      kind: integer
+      label: Media Limit
+      description: Page size (`limit`) for the `/media` edge.
+
+    - name: media_max_pages
+      kind: integer
+      label: Media Max Pages
+      description: >
+        Maximum number of pages to fetch from the `/media` edge (safety cap
+        against an unbounded pagination loop).
+
+    - name: media_metrics
+      kind: array
+      label: Media Metrics
+      description: >
+        Per-post insight metrics to extract; one `ig_media_<metric>` stream
+        is generated per metric/breakdown combination. Requires media_fields
+        and media_metric_compatibility.
+
+    - name: media_metric_compatibility
+      kind: object
+      label: Media Metric Compatibility
+      description: >
+        Maps each media_product_type (FEED/REELS/STORY) to the list of
+        metrics valid for it, so invalid metric/type calls are skipped. No
+        default; required when media_metrics is set.
+
     settings_group_validation:
     - [access_token, ig_user_id, metrics]
+
+    # `select` controls which streams run. User-insights and media streams
+    # are independent: list only user streams here to skip media entirely
+    # (media children additionally depend on the ig_media parent at runtime).
+    select:
+    - ig_views_*
+    - ig_reach_base
+    - ig_media
+    - ig_media_*
 
     config:
       access_token: $TAP_INSTAGRAM_USER_ACCESS_TOKEN
@@ -86,6 +131,27 @@ plugins:
       - metric: reach
         breakdowns:
         - ""
+      media_fields:
+      - id
+      - timestamp
+      - media_type
+      - media_product_type
+      - comments_count
+      - like_count
+      - media_url
+      - owner
+      - shortcode
+      - username
+      - thumbnail_url
+      media_limit: 100
+      media_max_pages: 100
+      media_metrics:
+      - metric: reach
+      - metric: views
+      media_metric_compatibility:
+        FEED: [comments, facebook_views, follows, impressions, likes, profile_activity, profile_visits, reach, reposts, saved, shares, total_interactions, views, total_comments, total_likes, total_views]
+        REELS: [comments, crossposted_views, facebook_views, ig_reels_avg_watch_time, ig_reels_video_view_total_time, likes, reach, reels_skip_rate, reposts, saved, shares, total_interactions, views, total_comments, total_likes, total_views]
+        STORY: [facebook_views, follows, impressions, link_clicks, navigation, profile_activity, profile_visits, reach, replies, reposts, shares, total_views]
 
   loaders:
   # Settings already defined on MeltanoHub for this variant, no need to

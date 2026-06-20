@@ -56,6 +56,43 @@ Each entry defines a metric and generates one stream per metric/breakdown combin
 
 See [config.template.json](config.template.json) for a full example.
 
+### Media extraction (optional)
+
+In addition to account-level (user) insights, the tap can extract **media** (posts) and their **per-post insights**. This is opt-in: media streams are only discovered when `media_fields` is set, so user-only setups are unaffected.
+
+Two levels, mirroring the Meta API:
+
+- **`ig_media`** — the account's media list (`GET /{ig_user_id}/media`), cursor-paginated. One row per post per day (snapshot), raw post JSON stored in `raw_data`.
+- **`ig_media_<metric>`** — per-post insights (`GET /{id_post}/insights`), one stream per metric/breakdown (child of `ig_media`). One row per post × metric.
+
+| Setting | Required | Description |
+|---|---|---|
+| `media_fields` | yes (to enable media) | Fields requested on the `/media` edge. No default (Meta-controlled vocabulary). **Must include `media_product_type`** — the insights children use it to filter valid metrics. |
+| `media_limit` | no (default `100`) | Page size (`limit`) for `/media` |
+| `media_max_pages` | no (default `100`) | Safety cap on pagination |
+| `media_metrics` | yes (for insights) | List of per-post metrics (and optional breakdowns), same shape as `metrics` |
+| `media_metric_compatibility` | yes (with `media_metrics`) | Maps each `media_product_type` (FEED/REELS/STORY) to its valid metrics. No default. |
+
+```json
+{
+  "media_fields": ["id", "timestamp", "media_type", "media_product_type", "like_count", "comments_count"],
+  "media_metrics": [
+    { "metric": "reach" },
+    { "metric": "views" },
+    { "metric": "profile_activity", "breakdowns": ["action_type"] }
+  ],
+  "media_metric_compatibility": {
+    "FEED":  ["reach", "views", "likes", "comments", "profile_activity"],
+    "REELS": ["reach", "views", "likes", "comments"],
+    "STORY": ["reach", "replies", "navigation"]
+  }
+}
+```
+
+Why `media_metric_compatibility` is config (not hardcoded): Meta only supports certain metrics per media type, and that vocabulary changes over time. Keeping it in config means a Meta change is fixed by editing config, not by republishing the package. At runtime, a metric is requested for a post only if it is in **both** `media_metrics` and `media_metric_compatibility[<post type>]`. If Meta still rejects a metric the table claims is valid, the run **fails loudly** (stale-table signal) rather than silently dropping data.
+
+User and media streams are independent — run only `ig_user` insights by selecting only the `ig_*` user streams (media children additionally depend on the `ig_media` parent at runtime). See `select:` in [meltano.yml](meltano.yml).
+
 ### Configuration via environment variables
 
 Copy `.env.example` to `.env` and fill in the real values (never committed). Meltano convention: `<PLUGIN_NAME>_<SETTING_NAME>` in uppercase, e.g. `TAP_INSTAGRAM_USER_ACCESS_TOKEN`.
@@ -107,6 +144,7 @@ uv run pytest
 - **Bookmark**: based on each day partition's `until`, capped so it never regresses (notably during the monthly consolidation). A single bookmark per stream (`state_partitioning_keys = []`), not one per partition.
 - **Primary key**: includes `metric_date` (the day the data is for) in addition to `ig_user_id`/`metric_name`/`breakdown_type`, to prevent an upsert on the target side from overwriting another day's data.
 - **Monthly consolidation**: on the 1st of the month, the tap automatically re-extracts the entire month before last (Meta insights can still be corrected after publication).
+- **Media (`ig_media` / `ig_media_<metric>`)**: a daily snapshot, not a time series (no `since`/`until`; the media insights edge always reports `lifetime`). The `ig_media` parent is cursor-paginated and guarded against running twice the same day; the per-metric children are SDK child streams (`parent_stream_type`) that receive each post's `media_product_type` and only call metrics declared valid for it.
 
 See the code in [tap_instagram_user/streams.py](tap_instagram_user/streams.py) and [tap_instagram_user/client.py](tap_instagram_user/client.py) for details.
 

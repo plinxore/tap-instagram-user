@@ -30,5 +30,34 @@
       "period": "week",
       "timeframe": "last_30_days"
     }
-  ]
+  ],
+
+  "media_fields": [
+    "id",
+    "timestamp",
+    "media_type",
+    "media_product_type",
+    "comments_count",
+    "like_count",
+    "is_comment_enabled",
+    "is_shared_to_feed",
+    "media_url",
+    "owner",
+    "shortcode",
+    "username",
+    "thumbnail_url"
+  ],
+  "media_limit": 100,
+  "media_max_pages": 100,
+
+  "media_metrics": [
+    { "metric": "reach" },
+    { "metric": "views" },
+    { "metric": "profile_activity", "breakdowns": ["action_type"] }
+  ],
+  "media_metric_compatibility": {
+    "FEED": ["comments", "facebook_views", "follows", "impressions", "likes", "profile_activity", "profile_visits", "reach", "reposts", "saved", "shares", "total_interactions", "views", "total_comments", "total_likes", "total_views"],
+    "REELS": ["comments", "crossposted_views", "facebook_views", "ig_reels_avg_watch_time", "ig_reels_video_view_total_time", "likes", "reach", "reels_skip_rate", "reposts", "saved", "shares", "total_interactions", "views", "total_comments", "total_likes", "total_views"],
+    "STORY": ["facebook_views", "follows", "impressions", "link_clicks", "navigation", "profile_activity", "profile_visits", "reach", "replies", "reposts", "shares", "total_views"]
+  }
 }
