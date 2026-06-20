@@ -19,7 +19,7 @@ uv sync
 | `access_token` | yes | Long-Lived Meta Token for the professional Instagram account |
 | `ig_user_id` | yes | Professional Instagram account ID |
 | `metrics` | yes | List of metrics (and their breakdowns) to extract — see below |
-| `start_date` | no | Start date on first extraction. If absent, computed automatically (1st of the current month minus 12 months) |
+| `start_date` | on first run | Start date on first extraction (ignored once a bookmark exists). No default — required on a stream's first run, settable globally or per metric |
 | `days_to_subtract` | no (default `0`) | Overlap window: number of already-covered days to re-extract on each run (useful because Meta insights can still be corrected after the fact) |
 | `period` | no (default `"day"`) | Granularity requested from the Meta Insights API |
 | `timeframe` | no | Optional `timeframe` parameter passed to the API |
@@ -28,7 +28,7 @@ uv sync
 
 ### `metrics`
 
-Each entry defines a metric and generates one stream per metric/breakdown combination (e.g. `views` + `follow_type` -> stream `ig_views_by_follow_type`). An entry may override any of the settings above (except `access_token`/`ig_user_id`, always global) for itself only:
+Each entry defines a metric and generates one stream per metric/breakdown combination (e.g. `views` + `follow_type` -> stream `ig_user_insights_views_by_follow_type`; `reach` with no breakdown -> `ig_user_insights_reach`). An entry may override any of the settings above (except `access_token`/`ig_user_id`, always global) for itself only:
 
 ```json
 {
@@ -63,7 +63,9 @@ In addition to account-level (user) insights, the tap can extract **media** (pos
 Two levels, mirroring the Meta API:
 
 - **`ig_media`** — the account's media list (`GET /{ig_user_id}/media`), cursor-paginated. One row per post per day (snapshot), raw post JSON stored in `raw_data`.
-- **`ig_media_<metric>`** — per-post insights (`GET /{id_post}/insights`), one stream per metric/breakdown (child of `ig_media`). One row per post × metric.
+- **`ig_media_insights_<metric>`** — per-post insights (`GET /{id_post}/insights`), one stream per metric/breakdown (child of `ig_media`). One row per post × metric.
+
+Stream names follow `ig_<node>_<edge>[_<metric>[_by_<breakdown>]]` (e.g. `ig_user_insights_reach`, `ig_media_insights_views`), with the bare node (`ig_media`) for the object list itself. The explicit edge segment keeps names collision-free as more Meta edges are added (e.g. a future `ig_media_comments` edge never clashes with the `comments` insight metric `ig_media_insights_comments`).
 
 | Setting | Required | Description |
 |---|---|---|
@@ -91,7 +93,7 @@ Two levels, mirroring the Meta API:
 
 Why `media_metric_compatibility` is config (not hardcoded): Meta only supports certain metrics per media type, and that vocabulary changes over time. Keeping it in config means a Meta change is fixed by editing config, not by republishing the package. At runtime, a metric is requested for a post only if it is in **both** `media_metrics` and `media_metric_compatibility[<post type>]`. If Meta still rejects a metric the table claims is valid, the run **fails loudly** (stale-table signal) rather than silently dropping data.
 
-User and media streams are independent — run only `ig_user` insights by selecting only the `ig_*` user streams (media children additionally depend on the `ig_media` parent at runtime). See `select:` in [meltano.yml](meltano.yml).
+User and media streams are independent — run only user insights by selecting only the `ig_user_*` streams (media children additionally depend on the `ig_media` parent at runtime). See `select:` in [meltano.yml](meltano.yml).
 
 ### Configuration via environment variables
 
@@ -144,7 +146,7 @@ uv run pytest
 - **Bookmark**: based on each day partition's `until`, capped so it never regresses (notably during the monthly consolidation). A single bookmark per stream (`state_partitioning_keys = []`), not one per partition.
 - **Primary key**: includes `metric_date` (the day the data is for) in addition to `ig_user_id`/`metric_name`/`breakdown_type`, to prevent an upsert on the target side from overwriting another day's data.
 - **Monthly consolidation**: on the 1st of the month, the tap automatically re-extracts the entire month before last (Meta insights can still be corrected after publication).
-- **Media (`ig_media` / `ig_media_<metric>`)**: a daily snapshot, not a time series (no `since`/`until`; the media insights edge always reports `lifetime`). The `ig_media` parent is cursor-paginated and guarded against running twice the same day; the per-metric children are SDK child streams (`parent_stream_type`) that receive each post's `media_product_type` and only call metrics declared valid for it.
+- **Media (`ig_media` / `ig_media_insights_<metric>`)**: a daily snapshot, not a time series (no `since`/`until`; the media insights edge always reports `lifetime`). The `ig_media` parent is cursor-paginated and guarded against running twice the same day; the per-metric children are SDK child streams (`parent_stream_type`) that receive each post's `media_product_type` and only call metrics declared valid for it.
 
 See the code in [tap_instagram_user/streams.py](tap_instagram_user/streams.py) and [tap_instagram_user/client.py](tap_instagram_user/client.py) for details.
 

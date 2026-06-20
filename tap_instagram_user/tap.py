@@ -47,9 +47,9 @@ class TapInstagramUser(Tap):
             description=(
                 "Default 'start_date' for all metrics on first extraction "
                 "(ignored once a bookmark exists). Overridable per entry in "
-                "`metrics` (e.g. 2026-05-01T00:00:00Z). If absent, a default "
-                "value is computed automatically: the 1st of the current "
-                "month minus 12 months."
+                "`metrics` (e.g. 2026-05-01T00:00:00Z). No default: required "
+                "on a stream's first run (it fails fast if neither this nor a "
+                "per-metric start_date is set)."
             ),
         ),
         th.Property(
@@ -216,8 +216,8 @@ class TapInstagramUser(Tap):
             ),
             description=(
                 "List of per-post insight metrics to extract; one "
-                "`ig_media_<metric>` stream is generated per metric/breakdown "
-                "combination. Requires `media_fields` and "
+                "`ig_media_insights_<metric>` stream is generated per "
+                "metric/breakdown combination. Requires `media_fields` and "
                 "`media_metric_compatibility`."
             ),
         ),
@@ -249,12 +249,15 @@ class TapInstagramUser(Tap):
             metric = entry["metric"]
             breakdowns = entry.get("breakdowns") or [""]
             for breakdown in breakdowns:
-                # SQL-friendly table name (no comma).
+                # SQL-friendly table name (no comma). Scheme:
+                # ig_<node>_<edge>[_<metric>[_by_<breakdown>]] — here the User
+                # node's Insights edge. The explicit `insights` segment keeps
+                # the name collision-free if other User edges are added later.
                 if breakdown:
                     safe_breakdown = breakdown.replace(",", "_and_")
-                    stream_name = f"ig_{metric}_by_{safe_breakdown}"
+                    stream_name = f"ig_user_insights_{metric}_by_{safe_breakdown}"
                 else:
-                    stream_name = f"ig_{metric}_base"
+                    stream_name = f"ig_user_insights_{metric}"
 
                 # Any overrides on this `metrics` entry are propagated to the
                 # stream (None if absent, in which case get_param() falls
@@ -301,11 +304,16 @@ class TapInstagramUser(Tap):
                 metric = entry["metric"]
                 breakdowns = entry.get("breakdowns") or [""]
                 for breakdown in breakdowns:
+                    # ig_<node>_<edge>...: the Media node's Insights edge. The
+                    # `insights` segment keeps these names distinct from other
+                    # Media edges added later (e.g. ig_media_comments), even
+                    # when a metric shares the edge's name (metric `comments`
+                    # -> ig_media_insights_comments, not ig_media_comments).
                     if breakdown:
                         safe_breakdown = breakdown.replace(",", "_and_")
-                        stream_name = f"ig_media_{metric}_by_{safe_breakdown}"
+                        stream_name = f"ig_media_insights_{metric}_by_{safe_breakdown}"
                     else:
-                        stream_name = f"ig_media_{metric}"
+                        stream_name = f"ig_media_insights_{metric}"
 
                     streams.append(MediaInsightsStream(
                         tap=self,

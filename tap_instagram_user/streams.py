@@ -7,6 +7,7 @@ import requests
 
 from singer_sdk import typing as th
 from singer_sdk.pagination import BaseAPIPaginator
+from singer_sdk.exceptions import ConfigurationError
 
 from tap_instagram_user.client import InstagramUserStream
 
@@ -73,20 +74,19 @@ class MetaRawInsightsStream(InstagramUserStream):
             last_date_executes = date.fromisoformat(state_bookmark[:10])
             self.logger.info(f"Resuming from bookmark (state): {last_date_executes}")
         else:
-            # First run: use the config value, otherwise a computed default.
+            # First run (no bookmark yet): an explicit start_date is required.
+            # No computed default on purpose — the look-back window is the
+            # user's call from the start (a default like "12 months" would
+            # silently trigger a very long first extraction).
             start_date_str = self.get_param("start_date")
-            if start_date_str:
-                last_date_executes = date.fromisoformat(start_date_str[:10])
-                self.logger.info(f"First run, forced start at: {last_date_executes}")
-            else:
-                # No 'start_date' provided: fall back to the 1st day of the
-                # current month, minus 12 months (e.g. running on 2026-06-19
-                # -> 2025-06-01).
-                last_date_executes = today.replace(day=1) - relativedelta(months=12)
-                self.logger.info(
-                    "First run, no 'start_date' provided: computed default "
-                    f"(1st of the month - 12 months) = {last_date_executes}"
+            if not start_date_str:
+                raise ConfigurationError(
+                    f"Stream '{self.name}': no bookmark yet and no 'start_date' "
+                    "set (neither globally nor on this metric). Provide a "
+                    "'start_date' to define where the first extraction starts."
                 )
+            last_date_executes = date.fromisoformat(start_date_str[:10])
+            self.logger.info(f"First run, start at: {last_date_executes}")
 
         # Bookmark as it was at the start of this run. The consolidation
         # block below generates partitions with an "until" earlier than this
