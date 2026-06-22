@@ -59,5 +59,10 @@
     "FEED": ["comments", "facebook_views", "follows", "impressions", "likes", "profile_activity", "profile_visits", "reach", "reposts", "saved", "shares", "total_interactions", "views", "total_comments", "total_likes", "total_views"],
     "REELS": ["comments", "crossposted_views", "facebook_views", "ig_reels_avg_watch_time", "ig_reels_video_view_total_time", "likes", "reach", "reels_skip_rate", "reposts", "saved", "shares", "total_interactions", "views", "total_comments", "total_likes", "total_views"],
     "STORY": ["facebook_views", "follows", "impressions", "link_clicks", "navigation", "profile_activity", "profile_visits", "reach", "replies", "reposts", "shares", "total_views"]
+  },
+  "media_metric_compatibility_by_media_type": {
+    "IMAGE": ["comments", "follows", "impressions", "likes", "profile_activity", "profile_visits", "reach", "reposts", "saved", "shares", "total_interactions", "total_comments", "total_likes"],
+    "VIDEO": ["comments", "crossposted_views", "facebook_views", "follows", "ig_reels_avg_watch_time", "ig_reels_video_view_total_time", "impressions", "likes", "navigation", "profile_activity", "profile_visits", "reach", "reels_skip_rate", "replies", "reposts", "saved", "shares", "total_interactions", "views", "total_comments", "total_likes", "total_views"],
+    "CAROUSEL_ALBUM": ["comments", "follows", "impressions", "likes", "profile_activity", "profile_visits", "reach", "reposts", "saved", "shares", "total_interactions", "total_comments", "total_likes"]
   }
 }

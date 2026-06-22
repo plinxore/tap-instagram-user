@@ -76,6 +76,8 @@ Stream names follow `ig_<node>_<edge>[_<metric>[_by_<breakdown>]]` (e.g. `ig_use
 | `media_max_pages` | no (default `100`) | Safety cap on pagination |
 | `media_metrics` | yes (for insights) | List of per-post metrics (and optional breakdowns), same shape as `metrics` |
 | `media_metric_compatibility` | yes (with `media_metrics`) | Maps each `media_product_type` (FEED/REELS/STORY) to its valid metrics. No default. |
+| `media_metric_compatibility_by_media_type` | no | Optional second axis: maps each `media_type` (IMAGE/VIDEO/CAROUSEL_ALBUM) to its valid metrics. When set, a metric is requested only if valid for **both** the post's product_type **and** media_type. Requires `media_type` in `media_fields`. |
+| `on_unsupported_metric` | no (default `fail`) | When Meta rejects a metric despite the tables: `fail` stops the run (stale-table signal, no silent loss); `skip` logs a WARNING and skips that post/metric (resilient unattended pipelines). |
 
 ```json
 {
@@ -93,7 +95,7 @@ Stream names follow `ig_<node>_<edge>[_<metric>[_by_<breakdown>]]` (e.g. `ig_use
 }
 ```
 
-Why `media_metric_compatibility` is config (not hardcoded): Meta only supports certain metrics per media type, and that vocabulary changes over time. Keeping it in config means a Meta change is fixed by editing config, not by republishing the package. At runtime, a metric is requested for a post only if it is in **both** `media_metrics` and `media_metric_compatibility[<post type>]`. If Meta still rejects a metric the table claims is valid, the run **fails loudly** (stale-table signal) rather than silently dropping data.
+Why `media_metric_compatibility` is config (not hardcoded): Meta only supports certain metrics per media type, and that vocabulary changes over time. Keeping it in config means a Meta change is fixed by editing config, not by republishing the package. At runtime, a metric is requested for a post only if it is in `media_metrics` **and** `media_metric_compatibility[<product_type>]` — and, when `media_metric_compatibility_by_media_type` is set, also in `media_metric_compatibility_by_media_type[<media_type>]` (intersection of the two axes). This second axis captures finer Meta rules the product_type alone can't, e.g. `views` applies to VIDEO media only, so it is skipped on FEED images. If Meta still rejects a metric both tables claim is valid, the behaviour depends on `on_unsupported_metric`: `fail` (default) stops the run loudly (stale-table signal, no silent loss), while `skip` logs a WARNING and skips just that post/metric (resilient unattended pipelines).
 
 User and media streams are independent — run only user insights by selecting only the `ig_user_*` streams (media children additionally depend on the `ig_media` parent at runtime). See `select:` in [meltano.yml](meltano.yml).
 

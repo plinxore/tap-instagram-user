@@ -234,6 +234,33 @@ class TapInstagramUser(Tap):
                 "supplied explicitly. Required when `media_metrics` is set."
             ),
         ),
+        th.Property(
+            "media_metric_compatibility_by_media_type",
+            th.ObjectType(additional_properties=th.ArrayType(th.StringType)),
+            description=(
+                "Optional second compatibility axis, mapping each media_type "
+                "(e.g. IMAGE, VIDEO, CAROUSEL_ALBUM) to the list of metrics "
+                "valid for it. When set, a metric is requested only if it is "
+                "valid for BOTH the post's media_product_type and its "
+                "media_type (intersection) — e.g. `views` applies to VIDEO "
+                "only. Requires `media_type` in `media_fields`. Omit to filter "
+                "by media_product_type alone."
+            ),
+        ),
+        th.Property(
+            "on_unsupported_metric",
+            th.StringType,
+            default="fail",
+            allowed_values=["fail", "skip"],
+            description=(
+                "Behaviour when Meta rejects a media-insights metric with "
+                "'does not support the metric' despite the compatibility "
+                "tables allowing it. 'fail' (default): raise and stop the run "
+                "(treat as a stale-table signal, no silent data loss). 'skip': "
+                "log a WARNING and skip that post/metric, for resilient "
+                "unattended pipelines."
+            ),
+        ),
     ).to_dict()
 
 

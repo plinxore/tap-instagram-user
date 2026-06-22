@@ -93,13 +93,52 @@ def test_missing_media_product_type_fails_fast() -> None:
         list(stream.get_records({"id_post": "1"}))
 
 
+def _media_type_tap():
+    # views is valid for FEED (axis 1) but only for VIDEO (axis 2).
+    return make_tap(
+        media_fields=["id", "media_product_type", "media_type"],
+        media_metrics=[{"metric": "views"}],
+        media_metric_compatibility={"FEED": ["reach", "views"], "REELS": ["reach", "views"]},
+        media_metric_compatibility_by_media_type={
+            "IMAGE": ["reach"],
+            "VIDEO": ["reach", "views"],
+        },
+    )
+
+
+def test_media_type_filter_skips_views_on_image() -> None:
+    # views passes the product_type axis (FEED) but not the media_type axis
+    # (IMAGE) -> skipped before any API call.
+    stream = media_insights_stream(_media_type_tap(), metric="views")
+    ctx = {"id_post": "1", "media_product_type": "FEED", "media_type": "IMAGE"}
+    assert list(stream.get_records(ctx)) == []
+
+
+def test_media_type_required_when_table_is_set() -> None:
+    stream = media_insights_stream(_media_type_tap(), metric="views")
+    ctx = {"id_post": "1", "media_product_type": "FEED"}  # no media_type
+    with pytest.raises(RuntimeError, match="media_type is required"):
+        list(stream.get_records(ctx))
+
+
 def test_validate_response_raises_on_unsupported_metric() -> None:
     stream = media_insights_stream(media_tap(), metric="reach")
     resp = FakeResponse(
         status_code=400,
         text='{"error":{"message":"The Media Insights API does not support the reach metric"}}',
     )
-    with pytest.raises(RuntimeError, match="media_metric_compatibility"):
+    with pytest.raises(RuntimeError, match="compatibility tables"):
+        stream.validate_response(resp)
+
+
+def test_unsupported_metric_skips_when_configured() -> None:
+    # on_unsupported_metric=skip -> "does not support" becomes a skip, not a raise.
+    stream = media_insights_stream(media_tap(on_unsupported_metric="skip"), metric="reach")
+    resp = FakeResponse(
+        status_code=400,
+        text='{"error":{"message":"The Media Insights API does not support the reach metric"}}',
+    )
+    with pytest.raises(_SkipMediaError):
         stream.validate_response(resp)
 
 

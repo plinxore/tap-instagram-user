@@ -321,16 +321,18 @@ class MediaStream(InstagramUserStream):
         }
 
     def get_child_context(self, record: dict, context: Context | None) -> dict:
-        """Pass each post's id and product type down to the insights child.
+        """Pass each post's id, product type and media type down to the child.
 
-        `media_product_type` comes straight from the `/media` response (it is
-        one of the requested `media_fields`); the child uses it to filter the
-        metrics it may request. If it was not requested, the value is None and
-        the child fails fast (cf. MediaInsightsStream.get_records).
+        `media_product_type` and `media_type` come straight from the `/media`
+        response (they are requested `media_fields`); the child uses them to
+        filter the metrics it may request. A value not requested is None and
+        the child fails fast when the matching filter is enabled
+        (cf. MediaInsightsStream.get_records).
         """
         return {
             "id_post": record["id_post"],
             "media_product_type": record["raw_data"].get("media_product_type"),
+            "media_type": record["raw_data"].get("media_type"),
         }
 
 
@@ -401,57 +403,85 @@ class MediaInsightsStream(InstagramUserStream):
         return params
 
     def get_records(self, context: Context | None) -> Iterable[dict]:
-        """Filter by media_product_type, then extract; skip expected per-post errors."""
-        post_type = (context or {}).get("media_product_type")
+        """Filter by product type (and optionally media type), then extract."""
+        ctx = context or {}
+        post_type = ctx.get("media_product_type")
         if post_type is None:
             # media_product_type was not requested in media_fields: the child
             # has no basis to filter. Fail fast rather than silently skip.
             raise RuntimeError(
                 "media_product_type is required in 'media_fields' for media "
                 "insights to work (it determines which metrics are valid per "
-                f"post). Post {(context or {}).get('id_post', '?')} has none."
+                f"post). Post {ctx.get('id_post', '?')} has none."
             )
 
-        # Compatibility filtering: only call the API if this metric is declared
-        # valid for the post's product type. Not an error — just not applicable.
-        allowed = self.get_param("media_metric_compatibility", {}).get(post_type, [])
-        if self.metric_name not in allowed:
+        # Compatibility filtering (intersection of two independent axes): only
+        # call the API if this metric is declared valid for the post's product
+        # type AND, when the optional media_type table is set, for its media
+        # type. Not an error — just not applicable. (Meta's support is finer
+        # than product_type alone: e.g. `views` only applies to VIDEO media.)
+        by_product_type = self.get_param("media_metric_compatibility", {})
+        if self.metric_name not in by_product_type.get(post_type, []):
             return
+
+        by_media_type = self.get_param("media_metric_compatibility_by_media_type")
+        if by_media_type is not None:
+            media_type = ctx.get("media_type")
+            if media_type is None:
+                raise RuntimeError(
+                    "media_type is required in 'media_fields' when "
+                    "'media_metric_compatibility_by_media_type' is set. Post "
+                    f"{ctx.get('id_post', '?')} has none."
+                )
+            if self.metric_name not in by_media_type.get(media_type, []):
+                return
 
         if not getattr(self, "_extraction_date", None):
             self._extraction_date = datetime.now(timezone.utc).isoformat()
 
+        # Kept for validate_response logging (no context there).
+        self._current_id_post = ctx.get("id_post")
         try:
             yield from super().get_records(context)
         except _SkipMediaError:
-            self.logger.info(
-                f"Skipping post {(context or {}).get('id_post')} for metric "
-                f"'{self.metric_name}': media posted before business account "
-                "conversion."
-            )
+            # validate_response already logged the reason.
             return
 
     def validate_response(self, response: requests.Response) -> None:
-        """Distinguish a stale compatibility table (fatal) from expected noise.
+        """Map Meta 400s to fail-fast or skip, depending on the condition.
 
         - "does not support the metric": the metric was sent because the
-          compatibility table said it was valid, yet Meta rejected it. This is
-          systemic (it recurs every run) and signals an outdated table, so it
-          is raised loudly rather than swallowed (which would silently drop
-          data on the target side).
+          compatibility tables said it was valid, yet Meta rejected it. By
+          default (`on_unsupported_metric=fail`) this is raised loudly — it is
+          usually systemic (recurs every run) and signals an outdated table.
+          With `on_unsupported_metric=skip` it is logged (WARNING) and the
+          post/metric is skipped instead, for resilient unattended pipelines.
         - "Media Posted Before Business Account Conversion": expected per-post
-          condition, raised as an internal sentinel and skipped upstream.
+          condition, always skipped (info log).
         """
+        post = getattr(self, "_current_id_post", "?")
         if response.status_code == 400:
             text = response.text
             if "does not support the" in text:
+                if self.get_param("on_unsupported_metric", "fail") == "skip":
+                    self.logger.warning(
+                        f"Skipping post {post} for metric '{self.metric_name}': "
+                        "Meta does not support it for this media "
+                        "(on_unsupported_metric=skip). Meta said: %s", text,
+                    )
+                    raise _SkipMediaError
                 raise RuntimeError(
                     f"Metric '{self.metric_name}' was rejected by Meta for a "
-                    "media object. Your 'media_metric_compatibility' table is "
-                    "likely outdated (metric deprecated, renamed, or no longer "
-                    f"valid for this media_product_type). Meta said: {text}"
+                    "media object. Your compatibility tables are likely "
+                    "outdated (metric deprecated, renamed, or not valid for "
+                    "this media_product_type/media_type), or set "
+                    "'on_unsupported_metric' to 'skip'. Meta said: " + text
                 )
             if "Media Posted Before Business Account Conversion" in text:
+                self.logger.info(
+                    f"Skipping post {post} for metric '{self.metric_name}': "
+                    "media posted before business account conversion."
+                )
                 raise _SkipMediaError
         super().validate_response(response)
 

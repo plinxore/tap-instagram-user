@@ -103,6 +103,28 @@ plugins:
         metrics valid for it, so invalid metric/type calls are skipped. No
         default; required when media_metrics is set.
 
+    - name: media_metric_compatibility_by_media_type
+      kind: object
+      label: Media Metric Compatibility By Media Type
+      description: >
+        Optional second axis: maps each media_type (IMAGE/VIDEO/
+        CAROUSEL_ALBUM) to its valid metrics. When set, a metric is requested
+        only if valid for BOTH the post's product_type and media_type (e.g.
+        views applies to VIDEO only). Requires media_type in media_fields.
+
+    - name: on_unsupported_metric
+      kind: options
+      label: On Unsupported Metric
+      value: fail
+      options:
+      - { label: Fail, value: fail }
+      - { label: Skip, value: skip }
+      description: >
+        What to do when Meta rejects a media-insights metric with 'does not
+        support the metric' despite the compatibility tables. 'fail' (default)
+        stops the run (stale-table signal); 'skip' logs a WARNING and skips
+        that post/metric.
+
     settings_group_validation:
     - [access_token, ig_user_id, metrics]
 
@@ -116,7 +138,7 @@ plugins:
 
     config:
       access_token: $TAP_INSTAGRAM_USER_ACCESS_TOKEN
-      ig_user_id: "17841442069516211"
+      ig_user_id: $TAP_INSTAGRAM_USER_IG_USER_ID
       days_to_subtract: 0
       period: day
       metric_type: total_value
@@ -151,6 +173,12 @@ plugins:
         FEED: [comments, facebook_views, follows, impressions, likes, profile_activity, profile_visits, reach, reposts, saved, shares, total_interactions, views, total_comments, total_likes, total_views]
         REELS: [comments, crossposted_views, facebook_views, ig_reels_avg_watch_time, ig_reels_video_view_total_time, likes, reach, reels_skip_rate, reposts, saved, shares, total_interactions, views, total_comments, total_likes, total_views]
         STORY: [facebook_views, follows, impressions, link_clicks, navigation, profile_activity, profile_visits, reach, replies, reposts, shares, total_views]
+      # Optional second axis: `views` (and other play metrics) apply to VIDEO
+      # only, so they are listed under VIDEO and omitted from IMAGE/CAROUSEL.
+      media_metric_compatibility_by_media_type:
+        IMAGE: [comments, follows, impressions, likes, profile_activity, profile_visits, reach, reposts, saved, shares, total_interactions, total_comments, total_likes]
+        VIDEO: [comments, crossposted_views, facebook_views, follows, ig_reels_avg_watch_time, ig_reels_video_view_total_time, impressions, likes, navigation, profile_activity, profile_visits, reach, reels_skip_rate, replies, reposts, saved, shares, total_interactions, views, total_comments, total_likes, total_views]
+        CAROUSEL_ALBUM: [comments, follows, impressions, likes, profile_activity, profile_visits, reach, reposts, saved, shares, total_interactions, total_comments, total_likes]
 
   loaders:
   # Settings already defined on MeltanoHub for this variant, no need to
@@ -160,12 +188,12 @@ plugins:
     pip_url: pipelinewise-target-postgres
 
     config:
-      host: localhost
-      port: 5432
-      user: admin
+      host: $TARGET_POSTGRES_HOST
+      port: $TARGET_POSTGRES_PORT
+      user: $TARGET_POSTGRES_USER
       password: $TARGET_POSTGRES_PASSWORD
-      dbname: my_database
-      default_target_schema: public
+      dbname: $TARGET_POSTGRES_DBNAME
+      default_target_schema: $TARGET_POSTGRES_DEFAULT_TARGET_SCHEMA
       add_metadata_columns: true
 
   - name: target-jsonl
