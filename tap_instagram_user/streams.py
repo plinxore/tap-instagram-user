@@ -14,7 +14,14 @@ from tap_instagram_user.client import InstagramUserStream
 
 
 class MetaRawInsightsStream(InstagramUserStream):
-    """Generic stream for extracting any Instagram metric."""
+    """Account-level (user) insights — one stream per metric/breakdown.
+
+    Covers the IG User `insights` edge: GET /{ig_user_id}/insights
+    https://developers.facebook.com/docs/instagram-platform/api-reference/instagram-user/insights
+
+    (The IG User node's own profile fields — followers_count, media_count,
+    etc. at GET /{ig_user_id} — are NOT extracted by any stream yet.)
+    """
 
     # `metric_date` (the day the data is for, = the partition's "since") is
     # required in the key: without it, two different days for the same
@@ -249,6 +256,23 @@ class MediaStream(InstagramUserStream):
     Daily snapshot of the current state of every post (cursor-paginated),
     not a time series: no since/until window. Each post is stored raw in
     `raw_data`, following the same ELT pattern as MetaRawInsightsStream.
+
+    This single stream covers TWO Meta doc pages at once, so there is no
+    separate "IG Media node" stream to implement:
+
+    1. IG User -> `media` edge (the endpoint we actually call):
+       GET /{ig_user_id}/media?fields=...
+       https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media
+
+    2. IG Media node fields (id, timestamp, media_type, media_product_type,
+       like_count, owner, ...): obtained here via *field expansion* on the
+       edge above (the `media_fields` config = the `fields=` list), NOT via a
+       per-post `GET /{ig_media_id}`. Same fields, one paginated call instead
+       of N. So the IG Media "root" page is already covered by this stream:
+       https://developers.facebook.com/docs/instagram-platform/reference/instagram-media
+
+    Only the IG Media *insights* edge is not field-expandable (one call per
+    post), hence the separate child MediaInsightsStream.
     """
 
     primary_keys = ["ig_user_id", "id_post", "extraction_date"]
@@ -342,6 +366,13 @@ class _SkipMediaError(Exception):
 
 class MediaInsightsStream(InstagramUserStream):
     """Per-post insights for a single metric (child of MediaStream).
+
+    Covers the IG Media `insights` edge: GET /{id_post}/insights
+    https://developers.facebook.com/docs/instagram-platform/reference/instagram-media/insights
+
+    This edge is NOT field-expandable in bulk, so unlike the post fields
+    (handled by MediaStream), it requires one call per post — hence this
+    child stream.
 
     One instance per metric/breakdown combination (cf. discover_streams).
     For every post emitted by the parent, requests
