@@ -10,10 +10,10 @@ from singer_sdk.exceptions import ConfigurationError
 from singer_sdk.helpers.types import Context
 from singer_sdk.pagination import BaseAPIPaginator
 
-from tap_instagram_user.client import InstagramUserStream
+from tap_instagram_user.client import InstagramStream
 
 
-class UserInsightsStream(InstagramUserStream):
+class UserInsightsStream(InstagramStream):
     """Account-level (user) insights — one stream per metric/breakdown.
 
     Covers the IG User `insights` edge: GET /{ig_user_id}/insights
@@ -250,7 +250,7 @@ class InstagramMediaPaginator(BaseAPIPaginator):
         return paging.get("cursors", {}).get("after")
 
 
-class MediaStream(InstagramUserStream):
+class MediaStream(InstagramStream):
     """List of the account's Instagram media (posts).
 
     Daily snapshot of the current state of every post (cursor-paginated),
@@ -364,7 +364,7 @@ class _SkipMediaError(Exception):
     """Internal sentinel: skip the current post without failing the run."""
 
 
-class MediaInsightsStream(InstagramUserStream):
+class MediaInsightsStream(InstagramStream):
     """Per-post insights for a single metric (child of MediaStream).
 
     Covers the IG Media `insights` edge: GET /{id_post}/insights

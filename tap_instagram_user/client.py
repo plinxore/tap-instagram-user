@@ -1,4 +1,4 @@
-"""REST client handling, including InstagramUserStream base class."""
+"""REST client handling, including InstagramStream base class."""
 
 from datetime import datetime, timezone
 from typing import Any
@@ -7,7 +7,7 @@ from singer_sdk.helpers.types import Context
 from singer_sdk.streams import RESTStream
 
 
-class InstagramUserStream(RESTStream):
+class InstagramStream(RESTStream):
     """Base class handling the connection to the Meta Graph API.
 
     No static JSON schema and no JSONPath parser: the schema and response
