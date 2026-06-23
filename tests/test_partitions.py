@@ -1,16 +1,16 @@
-"""Partition / bookmark logic of MetaRawInsightsStream (the user-insights core)."""
+"""Partition / bookmark logic of UserInsightsStream (the user-insights core)."""
 
 from __future__ import annotations
 
 import pytest
 from singer_sdk.exceptions import ConfigurationError
 
-from tap_instagram_user.streams import MetaRawInsightsStream
+from tap_instagram_user.streams import UserInsightsStream
 from tests.conftest import make_tap, set_bookmark, user_stream
 
 
 def _build(day_by_day, start, end):
-    return MetaRawInsightsStream._build_range_partitions(start, end, day_by_day)
+    return UserInsightsStream._build_range_partitions(start, end, day_by_day)
 
 
 # --- _build_range_partitions (pure) -----------------------------------------

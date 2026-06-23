@@ -11,7 +11,7 @@ class InstagramUserStream(RESTStream):
     """Base class handling the connection to the Meta Graph API.
 
     No static JSON schema and no JSONPath parser: the schema and response
-    parsing are entirely dynamic (cf. MetaRawInsightsStream).
+    parsing are entirely dynamic (cf. UserInsightsStream).
     """
 
     @property
@@ -23,7 +23,7 @@ class InstagramUserStream(RESTStream):
         """Return a config parameter, overridable per metric.
 
         If the stream was instantiated with an override for `name` (cf.
-        MetaRawInsightsStream.__init__, attribute `_override_<name>`), it is
+        UserInsightsStream.__init__, attribute `_override_<name>`), it is
         returned; otherwise the tap's global value (`config.json`) applies.
         """
         override = getattr(self, f"_override_{name}", None)

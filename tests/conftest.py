@@ -10,7 +10,7 @@ from tap_instagram_user import streams as streams_mod
 from tap_instagram_user.streams import (
     MediaInsightsStream,
     MediaStream,
-    MetaRawInsightsStream,
+    UserInsightsStream,
 )
 from tap_instagram_user.tap import TapInstagramUser
 
@@ -50,9 +50,9 @@ def make_tap(**overrides) -> TapInstagramUser:
 
 def user_stream(
     tap: TapInstagramUser, metric: str = "reach", breakdown: str = "", **overrides
-) -> MetaRawInsightsStream:
+) -> UserInsightsStream:
     """Build a single user-insights stream, optionally with per-metric overrides."""
-    return MetaRawInsightsStream(
+    return UserInsightsStream(
         tap=tap,
         name=f"ig_user_insights_{metric}",
         metric_name=metric,

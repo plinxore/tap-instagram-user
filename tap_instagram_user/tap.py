@@ -9,7 +9,7 @@ from singer_sdk.exceptions import ConfigurationError
 from tap_instagram_user.streams import (
     MediaInsightsStream,
     MediaStream,
-    MetaRawInsightsStream,
+    UserInsightsStream,
 )
 
 if sys.version_info >= (3, 12):
@@ -290,7 +290,7 @@ class TapInstagramUser(Tap):
                 # Any overrides on this `metrics` entry are propagated to the
                 # stream (None if absent, in which case get_param() falls
                 # back to the tap's global value).
-                stream = MetaRawInsightsStream(
+                stream = UserInsightsStream(
                     tap=self,
                     name=stream_name,
                     metric_name=metric,

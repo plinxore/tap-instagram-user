@@ -13,7 +13,7 @@ from singer_sdk.pagination import BaseAPIPaginator
 from tap_instagram_user.client import InstagramUserStream
 
 
-class MetaRawInsightsStream(InstagramUserStream):
+class UserInsightsStream(InstagramUserStream):
     """Account-level (user) insights — one stream per metric/breakdown.
 
     Covers the IG User `insights` edge: GET /{ig_user_id}/insights
@@ -255,7 +255,7 @@ class MediaStream(InstagramUserStream):
 
     Daily snapshot of the current state of every post (cursor-paginated),
     not a time series: no since/until window. Each post is stored raw in
-    `raw_data`, following the same ELT pattern as MetaRawInsightsStream.
+    `raw_data`, following the same ELT pattern as UserInsightsStream.
 
     This single stream covers TWO Meta doc pages at once, so there is no
     separate "IG Media node" stream to implement:
@@ -325,7 +325,7 @@ class MediaStream(InstagramUserStream):
 
         `ig_media` is a once-a-day snapshot; re-running on the same day would
         duplicate the whole post list. The "already ran today" guard mirrors
-        the legacy behaviour (and MetaRawInsightsStream.partitions).
+        the legacy behaviour (and UserInsightsStream.partitions).
         """
         state_bookmark = self.get_context_state(None).get("replication_key_value")
         if state_bookmark and date.fromisoformat(state_bookmark[:10]) >= date.today():
