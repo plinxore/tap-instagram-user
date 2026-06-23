@@ -67,6 +67,15 @@ plugins:
         override start_date/days_to_subtract/period/timeframe/metric_type/
         generate_dates_range. Required.
 
+    - name: user_fields
+      kind: array
+      label: User Fields
+      description: >
+        Fields to request on the IG User node for the `ig_user` stream (e.g.
+        username, followers_count, follows_count, media_count). No default
+        (Meta-controlled vocabulary). Set it to enable the account-profile
+        snapshot; omit to skip it.
+
     - name: media_fields
       kind: array
       label: Media Fields
@@ -86,6 +95,30 @@ plugins:
       description: >
         Maximum number of pages to fetch from the `/media` edge (safety cap
         against an unbounded pagination loop).
+
+    - name: media_since
+      kind: date_iso8601
+      label: Media Since
+      description: >
+        Optional floor date for the /media list (sent as the `since` Unix
+        timestamp). Bounds the first-run backfill. No default (omit = full
+        catalogue, capped at Meta's ~10K most recent media).
+
+    - name: media_until
+      kind: date_iso8601
+      label: Media Until
+      description: >
+        Optional ceiling date for the /media list (sent as `until`). Usually
+        unset (= up to now); useful for backfilling a fixed window.
+
+    - name: media_active_window_days
+      kind: integer
+      label: Media Active Window Days
+      description: >
+        Optional rolling refresh window (days). When set, only the first run
+        backfills (down to media_since); later runs fetch just the last N
+        days, so frozen old posts are not re-listed nor re-fetched. Omit for a
+        full snapshot every run. No default (affects completeness; opt-in).
 
     - name: media_metrics
       kind: array
@@ -132,6 +165,7 @@ plugins:
     # are independent: list only user streams here to skip media entirely
     # (media children additionally depend on the ig_media parent at runtime).
     select:
+    - ig_user
     - ig_user_*
     - ig_media
     - ig_media_*
@@ -152,6 +186,13 @@ plugins:
       - metric: reach
         breakdowns:
         - ""
+      user_fields:
+      - username
+      - followers_count
+      - follows_count
+      - media_count
+      - biography
+      - website
       media_fields:
       - id
       - timestamp

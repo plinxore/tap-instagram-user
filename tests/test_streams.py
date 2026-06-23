@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tap_instagram_user.streams import InstagramMediaPaginator, _SkipMediaError
+from tap_instagram_user.streams import InstagramMediaPaginator, UserStream, _SkipMediaError
 from tests.conftest import (
     FakeResponse,
     make_tap,
@@ -164,6 +164,18 @@ def test_get_param_falls_back_to_config() -> None:
     tap = make_tap(period="day")
     stream = user_stream(tap)  # no override
     assert stream.get_param("period") == "day"
+
+
+def test_user_node_url_params_and_post_process() -> None:
+    tap = make_tap(user_fields=["username", "followers_count"])
+    stream = UserStream(tap=tap, name="ig_user")
+    params = stream.get_url_params(None, None)
+    assert params["fields"] == "username,followers_count"
+    assert params["access_token"] == "test-token"
+    stream._extraction_date = "2026-06-20T00:00:00+00:00"
+    row = stream.post_process({"id": "1", "followers_count": 10}, None)
+    assert row["ig_user_id"] == "123456789"
+    assert row["raw_data"]["followers_count"] == 10
 
 
 def test_user_insights_always_sends_metric_type() -> None:

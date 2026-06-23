@@ -10,6 +10,7 @@ from tap_instagram_user.streams import (
     MediaInsightsStream,
     MediaStream,
     UserInsightsStream,
+    UserStream,
 )
 
 if sys.version_info >= (3, 12):
@@ -165,6 +166,17 @@ class TapInstagramUser(Tap):
             ),
         ),
         th.Property(
+            "user_fields",
+            th.ArrayType(th.StringType),
+            description=(
+                "Fields to request on the IG User node for the `ig_user` "
+                "stream (e.g. username, followers_count, follows_count, "
+                "media_count, biography, website). No in-code default "
+                "(Meta-controlled vocabulary). Set it to enable the `ig_user` "
+                "account-profile snapshot; omit to skip it."
+            ),
+        ),
+        th.Property(
             "media_fields",
             th.ArrayType(th.StringType),
             description=(
@@ -189,6 +201,36 @@ class TapInstagramUser(Tap):
             description=(
                 "Maximum number of pages to fetch from the `/media` edge "
                 "(safety cap against an unbounded pagination loop)."
+            ),
+        ),
+        th.Property(
+            "media_since",
+            th.DateTimeType,
+            description=(
+                "Optional floor date for the `/media` list (passed as the "
+                "`since` Unix timestamp). On the first run it bounds the "
+                "backfill; omit it to backfill the whole catalogue (capped at "
+                "Meta's ~10K most recent media). No default."
+            ),
+        ),
+        th.Property(
+            "media_until",
+            th.DateTimeType,
+            description=(
+                "Optional ceiling date for the `/media` list (passed as the "
+                "`until` Unix timestamp). Usually left unset (= up to now); "
+                "useful for backfilling a fixed window. No default."
+            ),
+        ),
+        th.Property(
+            "media_active_window_days",
+            th.IntegerType,
+            description=(
+                "Optional rolling refresh window (in days). When set, only the "
+                "FIRST run backfills (down to `media_since`); later runs fetch "
+                "just the last N days, so frozen old posts are not re-listed "
+                "nor their insights re-fetched. Omit for a full snapshot every "
+                "run. No default (this affects completeness, so it is opt-in)."
             ),
         ),
         th.Property(
@@ -304,6 +346,11 @@ class TapInstagramUser(Tap):
                 )
 
                 streams.append(stream)
+
+        # IG User node (account profile/stats) — optional, only when
+        # `user_fields` is configured.
+        if self.config.get("user_fields"):
+            streams.append(UserStream(tap=self, name="ig_user"))
 
         # Media extraction is optional: the `ig_media` stream is only
         # discovered when `media_fields` is configured, so user-insights-only

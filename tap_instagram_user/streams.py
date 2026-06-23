@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 from singer_sdk import typing as th
 from singer_sdk.exceptions import ConfigurationError
 from singer_sdk.helpers.types import Context
-from singer_sdk.pagination import BaseAPIPaginator
+from singer_sdk.pagination import BaseAPIPaginator, SinglePagePaginator
 
 from tap_instagram_user.client import InstagramStream
 
@@ -20,7 +20,7 @@ class UserInsightsStream(InstagramStream):
     https://developers.facebook.com/docs/instagram-platform/api-reference/instagram-user/insights
 
     (The IG User node's own profile fields — followers_count, media_count,
-    etc. at GET /{ig_user_id} — are NOT extracted by any stream yet.)
+    etc. at GET /{ig_user_id} — are handled by the separate UserStream.)
     """
 
     # `metric_date` (the day the data is for, = the partition's "since") is
@@ -224,6 +224,70 @@ class UserInsightsStream(InstagramStream):
         }
 
 
+class UserStream(InstagramStream):
+    """IG User node — the account's own profile/stats fields.
+
+    Covers the IG User root: GET /{ig_user_id}?fields=...
+    https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user
+
+    A single-record daily snapshot of the account (one row per run):
+    followers_count, follows_count, media_count, username, etc. The node read
+    returns one object (no `data` array, no pagination, no date filter).
+    """
+
+    primary_keys = ["ig_user_id", "extraction_date"]
+    replication_key = "extraction_date"
+    is_sorted = False
+    state_partitioning_keys = []
+    # The node read returns a single object, not a "data" array.
+    records_jsonpath = "$"
+    path = "/{ig_user_id}"
+
+    schema = th.PropertiesList(
+        th.Property("ig_user_id", th.StringType, required=True),
+        th.Property("extraction_date", th.DateTimeType),
+        th.Property(
+            "raw_data",
+            th.CustomType({"type": ["object", "array"]}),
+            description="The raw JSON of the IG User node returned by the Meta API"
+        ),
+    ).to_dict()
+
+    def get_new_paginator(self) -> SinglePagePaginator:
+        """Single object, no pagination."""
+        return SinglePagePaginator()
+
+    def get_url_params(
+        self, context: Context | None, next_page_token: Any | None
+    ) -> dict:
+        """Build the `GET /{ig_user_id}` query string.
+
+        `user_fields` is required (no in-code default): the list of fields is a
+        Meta-controlled vocabulary and must come from config.
+        """
+        return {
+            "access_token": self.config.get("access_token"),
+            "fields": ",".join(self.get_param("user_fields")),
+        }
+
+    def get_records(self, context: Context | None) -> Iterable[dict]:
+        """Skip if already run today; otherwise take the daily snapshot."""
+        state_bookmark = self.get_context_state(None).get("replication_key_value")
+        if state_bookmark and date.fromisoformat(state_bookmark[:10]) >= date.today():
+            self.logger.info("Already ran today. Done.")
+            return
+        self._extraction_date = datetime.now(timezone.utc).isoformat()
+        yield from super().get_records(context)
+
+    def post_process(self, row: dict, context: Context | None = None) -> dict:
+        """Wrap the raw profile object with its metadata, without transformation."""
+        return {
+            "ig_user_id": self.config.get("ig_user_id"),
+            "extraction_date": self._extraction_date,
+            "raw_data": row,
+        }
+
+
 class InstagramMediaPaginator(BaseAPIPaginator):
     """Cursor paginator for the Meta `/media` edge.
 
@@ -297,9 +361,52 @@ class MediaStream(InstagramStream):
     # from config when building the URL (cf. RESTStream.get_url).
     path = "/{ig_user_id}/media"
 
+    # since/until Unix timestamps for the current run (set in get_records).
+    _media_since_ts: int | None = None
+    _media_until_ts: int | None = None
+
     def get_new_paginator(self) -> BaseAPIPaginator:
         """Cursor paginator capped at `media_max_pages`."""
         return InstagramMediaPaginator(self.get_param("media_max_pages", 100))
+
+    @staticmethod
+    def _to_unix(d: date) -> int:
+        """Convert a date to a start-of-day UTC Unix timestamp (Meta's format)."""
+        return int(datetime(d.year, d.month, d.day, tzinfo=timezone.utc).timestamp())
+
+    def _media_window(
+        self, state_bookmark: str | None, today: date
+    ) -> tuple[int | None, int | None]:
+        """Compute the (since, until) Unix timestamps for the `/media` call.
+
+        Incremental strategy (all opt-in, no default):
+        - `media_since`: floor of the initial backfill.
+        - `media_until`: optional fixed ceiling (usually unset = up to now).
+        - `media_active_window_days`: rolling refresh window. With it set,
+          only the FIRST run backfills (down to `media_since`); later runs
+          fetch just the active window, so frozen old posts are not re-listed
+          (and their insights are not re-fetched). `min(last_run, today-window)`
+          also covers gaps if the pipeline was paused. Without it, every run
+          uses the `media_since` floor (full snapshot of the range each day).
+        """
+        media_since = self.get_param("media_since")
+        media_until = self.get_param("media_until")
+        active_window = self.get_param("media_active_window_days")
+        floor = date.fromisoformat(media_since[:10]) if media_since else None
+
+        since: date | None
+        if state_bookmark and active_window is not None:
+            last_run = date.fromisoformat(state_bookmark[:10])
+            since = min(last_run, today - timedelta(days=active_window))
+            if floor is not None and since < floor:
+                since = floor
+        else:
+            # First run, or no active window: backfill to the floor (if any).
+            since = floor
+
+        since_ts = self._to_unix(since) if since is not None else None
+        until_ts = self._to_unix(date.fromisoformat(media_until[:10])) if media_until else None
+        return since_ts, until_ts
 
     def get_url_params(
         self, context: Context | None, next_page_token: Any | None
@@ -310,27 +417,37 @@ class MediaStream(InstagramStream):
         is a Meta-controlled vocabulary and must come from config. If
         `media_product_type` is omitted, the media-insights child stream
         will fail fast downstream rather than silently filter on missing data.
+
+        `since`/`until` (computed in get_records) bound the list by date when
+        configured; they are kept on every page so cursor pagination stays
+        within the time range (mirrors the `paging.next` URL).
         """
         params: dict = {
             "access_token": self.config.get("access_token"),
             "fields": ",".join(self.get_param("media_fields")),
             "limit": self.get_param("media_limit", 100),
         }
+        if self._media_since_ts is not None:
+            params["since"] = self._media_since_ts
+        if self._media_until_ts is not None:
+            params["until"] = self._media_until_ts
         if next_page_token:
             params["after"] = next_page_token
         return params
 
     def get_records(self, context: Context | None) -> Iterable[dict]:
-        """Skip the run entirely if the snapshot was already taken today.
+        """Skip if already run today, else compute the date window and extract.
 
         `ig_media` is a once-a-day snapshot; re-running on the same day would
         duplicate the whole post list. The "already ran today" guard mirrors
         the legacy behaviour (and UserInsightsStream.partitions).
         """
         state_bookmark = self.get_context_state(None).get("replication_key_value")
-        if state_bookmark and date.fromisoformat(state_bookmark[:10]) >= date.today():
+        today = date.today()
+        if state_bookmark and date.fromisoformat(state_bookmark[:10]) >= today:
             self.logger.info("Already ran today. Done.")
             return
+        self._media_since_ts, self._media_until_ts = self._media_window(state_bookmark, today)
         # A single extraction timestamp for the whole run (all posts share it).
         self._extraction_date = datetime.now(timezone.utc).isoformat()
         yield from super().get_records(context)

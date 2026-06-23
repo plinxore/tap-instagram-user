@@ -35,6 +35,14 @@ def test_no_media_streams_without_media_fields() -> None:
     assert not any(n.startswith("ig_media") for n in _names(make_tap()))
 
 
+def test_no_ig_user_stream_without_user_fields() -> None:
+    assert "ig_user" not in _names(make_tap())
+
+
+def test_ig_user_stream_discovered_with_user_fields() -> None:
+    assert "ig_user" in _names(make_tap(user_fields=["username", "followers_count"]))
+
+
 def test_media_streams_discovered_with_config() -> None:
     tap = make_tap(
         media_fields=["id", "media_product_type"],

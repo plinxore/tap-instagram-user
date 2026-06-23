@@ -27,6 +27,7 @@ uv sync
 | `timeframe` | no | Optional `timeframe` parameter passed to the API |
 | `metric_type` | no (default `"total_value"`) | `metric_type` parameter passed to the API |
 | `generate_dates_range` | no (default `"active"`) | `"active"` = one API call per day; `"inactive"` = a single call covering the whole range |
+| `user_fields` | no | Fields of the IG User node (e.g. `followers_count`, `media_count`, `username`). Set to enable the `ig_user` account-profile snapshot stream (`GET /{ig_user_id}`); omit to skip it. No default. |
 
 ### `metrics`
 
@@ -74,6 +75,9 @@ Stream names follow `ig_<node>_<edge>[_<metric>[_by_<breakdown>]]` (e.g. `ig_use
 | `media_fields` | yes (to enable media) | Fields requested on the `/media` edge. No default (Meta-controlled vocabulary). **Must include `media_product_type`** — the insights children use it to filter valid metrics. |
 | `media_limit` | no (default `100`) | Page size (`limit`) for `/media` |
 | `media_max_pages` | no (default `100`) | Safety cap on pagination |
+| `media_since` | no | Floor date for the `/media` list (sent as `since`). Bounds the first-run backfill. No default (omit = whole catalogue, ~10K cap). |
+| `media_until` | no | Ceiling date (sent as `until`). Usually unset (= up to now); for backfilling a fixed window. |
+| `media_active_window_days` | no | Rolling refresh window (days). When set, only the first run backfills; later runs fetch just the last N days, so frozen old posts aren't re-fetched. Omit for a full snapshot every run. No default (opt-in). |
 | `media_metrics` | yes (for insights) | List of per-post metrics (and optional breakdowns), same shape as `metrics` |
 | `media_metric_compatibility` | yes (with `media_metrics`) | Maps each `media_product_type` (FEED/REELS/STORY) to its valid metrics. No default. |
 | `media_metric_compatibility_by_media_type` | no | Optional second axis: maps each `media_type` (IMAGE/VIDEO/CAROUSEL_ALBUM) to its valid metrics. When set, a metric is requested only if valid for **both** the post's product_type **and** media_type. Requires `media_type` in `media_fields`. |
@@ -150,7 +154,8 @@ uv run pytest
 - **Bookmark**: based on each day partition's `until`, capped so it never regresses (notably during the monthly consolidation). A single bookmark per stream (`state_partitioning_keys = []`), not one per partition.
 - **Primary key**: includes `metric_date` (the day the data is for) in addition to `ig_user_id`/`metric_name`/`breakdown_type`, to prevent an upsert on the target side from overwriting another day's data.
 - **Monthly consolidation**: on the 1st of the month, the tap automatically re-extracts the entire month before last (Meta insights can still be corrected after publication).
-- **Media (`ig_media` / `ig_media_insights_<metric>`)**: a daily snapshot, not a time series (no `since`/`until`; the media insights edge always reports `lifetime`). The `ig_media` parent is cursor-paginated and guarded against running twice the same day; the per-metric children are SDK child streams (`parent_stream_type`) that receive each post's `media_product_type` and only call metrics declared valid for it.
+- **Media (`ig_media` / `ig_media_insights_<metric>`)**: the per-post insights edge always reports `lifetime`. The `ig_media` parent is cursor-paginated and guarded against running twice the same day; the per-metric children are SDK child streams (`parent_stream_type`) that receive each post's `media_product_type` and only call metrics declared valid for it.
+- **Media incremental strategy**: by default `ig_media` is a full daily snapshot. With `media_active_window_days` set, only the first run backfills (down to `media_since`); subsequent runs fetch only `since = min(last_run, today - window)` — a rolling window that refreshes recent posts (whose stats still evolve) and covers any pause, while leaving frozen old posts untouched (so their insights aren't re-fetched). This is the media counterpart of the user-insights monthly consolidation. The driving bookmark is `ig_media`'s `extraction_date` (presence = backfill done; value = last run).
 
 See the code in [tap_instagram_user/streams.py](tap_instagram_user/streams.py) and [tap_instagram_user/client.py](tap_instagram_user/client.py) for details.
 

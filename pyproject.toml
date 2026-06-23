@@ -125,6 +125,7 @@ ignore = [
     "PLR2004",  # comparing against an HTTP status literal (400) is self-evident
     "FBT001",   # internal helper takes a positional bool by design
     "C901",     # the core partition/discovery logic is irreducibly branchy
+    "PLR0912",  # discover_streams legitimately branches per optional stream family
 ]
 select = ["ALL"]
 

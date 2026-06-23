@@ -32,6 +32,9 @@
     }
   ],
 
+  "user_fields": ["username", "followers_count", "follows_count", "media_count", "biography", "website"],
+
+
   "media_fields": [
     "id",
     "timestamp",
@@ -49,6 +52,8 @@
   ],
   "media_limit": 100,
   "media_max_pages": 100,
+  "media_since": "2025-01-01T00:00:00Z",
+  "media_active_window_days": 60,
 
   "media_metrics": [
     { "metric": "reach" },
