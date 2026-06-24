@@ -1,0 +1,109 @@
+# Curated "universe" of fields/metrics known from the Meta docs, per node/edge.
+#
+# Meta does NOT expose introspection on Instagram nodes (`?metadata=1` returns
+# only the id), so this list is the human-maintained source of candidates.
+# `scripts/introspect.py` validates each one against the LIVE API and writes
+# the result to docs/meta_api_reference.{yaml,md}. To track Meta's evolution:
+#   1. add newly documented fields/metrics here when the docs introduce them,
+#   2. re-run the script,
+#   3. read the git diff of docs/meta_api_reference.* (a field/metric flipping
+#      to "deprecated" = Meta dropped it).
+
+ig_user:
+  kind: fields
+  endpoint: GET /{ig_user_id}
+  doc: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user
+  candidates:
+    - biography
+    - followers_count
+    - follows_count
+    - has_profile_pic
+    - id
+    - is_published
+    - legacy_instagram_user_id
+    - media_count
+    - name
+    - profile_picture_url
+    - username
+    - website
+
+ig_media:
+  kind: fields
+  endpoint: GET /{ig_media_id}
+  doc: https://developers.facebook.com/docs/instagram-platform/reference/instagram-media
+  candidates:
+    - id
+    - timestamp
+    - media_type
+    - media_product_type
+    - caption
+    - permalink
+    - like_count
+    - comments_count
+    - media_url
+    - thumbnail_url
+    - owner
+    - shortcode
+    - username
+    - is_comment_enabled
+    - is_shared_to_feed
+    - media_audio_type
+    - alt_text
+    - boost_ads_list
+    - boost_eligibility_info
+    - legacy_instagram_media_id
+    - total_comments_count
+    - total_like_count
+    - total_views_count
+    - saved_count
+    - shares_count
+    - reposts_count
+    - view_count
+
+ig_user_insights:
+  kind: metrics
+  endpoint: GET /{ig_user_id}/insights
+  doc: https://developers.facebook.com/docs/instagram-platform/api-reference/instagram-user/insights
+  candidates:
+    - reach
+    - likes
+    - saves
+    - shares
+    - replies
+    - reposts
+    - total_interactions
+    - follows_and_unfollows
+    - profile_links_taps
+    - accounts_engaged
+    - profile_visits
+    - views
+    - impressions  # deprecated v22+/2025-04-21
+
+ig_media_insights:
+  kind: metrics
+  endpoint: GET /{ig_media_id}/insights
+  doc: https://developers.facebook.com/docs/instagram-platform/reference/instagram-media/insights
+  candidates:
+    - reach
+    - views
+    - comments
+    - likes
+    - saved
+    - shares
+    - reposts
+    - total_interactions
+    - profile_activity
+    - profile_visits
+    - follows
+    - navigation
+    - replies
+    - link_clicks
+    - facebook_views
+    - crossposted_views
+    - ig_reels_avg_watch_time
+    - ig_reels_video_view_total_time
+    - reels_skip_rate
+    - total_comments
+    - total_likes
+    - total_views
+    - impressions  # deprecated for media created after 2024-07-02

@@ -1,0 +1,475 @@
+generated_at: '2026-06-24T17:39:05.024345+00:00'
+api_version: v22.0
+ig_user:
+  endpoint: GET /{ig_user_id}
+  doc: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user
+  fields:
+  - name: biography
+    status: ok
+    note: ''
+  - name: followers_count
+    status: ok
+    note: ''
+  - name: follows_count
+    status: ok
+    note: ''
+  - name: has_profile_pic
+    status: ok
+    note: ''
+  - name: id
+    status: ok
+    note: ''
+  - name: is_published
+    status: ok
+    note: ''
+  - name: legacy_instagram_user_id
+    status: ok
+    note: ''
+  - name: media_count
+    status: ok
+    note: ''
+  - name: name
+    status: ok
+    note: ''
+  - name: profile_picture_url
+    status: ok
+    note: ''
+  - name: username
+    status: ok
+    note: ''
+  - name: website
+    status: ok
+    note: ''
+ig_media:
+  endpoint: GET /{ig_media_id}
+  doc: https://developers.facebook.com/docs/instagram-platform/reference/instagram-media
+  fields:
+  - name: id
+    status: ok
+    note: ''
+  - name: timestamp
+    status: ok
+    note: ''
+  - name: media_type
+    status: ok
+    note: ''
+  - name: media_product_type
+    status: ok
+    note: ''
+  - name: caption
+    status: ok
+    note: ''
+  - name: permalink
+    status: ok
+    note: ''
+  - name: like_count
+    status: ok
+    note: ''
+  - name: comments_count
+    status: ok
+    note: ''
+  - name: media_url
+    status: ok
+    note: ''
+  - name: thumbnail_url
+    status: ok
+    note: ''
+  - name: owner
+    status: ok
+    note: ''
+  - name: shortcode
+    status: ok
+    note: ''
+  - name: username
+    status: ok
+    note: ''
+  - name: is_comment_enabled
+    status: ok
+    note: ''
+  - name: is_shared_to_feed
+    status: ok
+    note: ''
+  - name: media_audio_type
+    status: ok
+    note: ''
+  - name: alt_text
+    status: ok
+    note: ''
+  - name: boost_ads_list
+    status: ok
+    note: ''
+  - name: boost_eligibility_info
+    status: ok
+    note: ''
+  - name: legacy_instagram_media_id
+    status: ok
+    note: ''
+  - name: total_comments_count
+    status: ok
+    note: ''
+  - name: total_like_count
+    status: ok
+    note: ''
+  - name: total_views_count
+    status: ok
+    note: ''
+  - name: saved_count
+    status: ok
+    note: ''
+  - name: shares_count
+    status: ok
+    note: ''
+  - name: reposts_count
+    status: ok
+    note: ''
+  - name: view_count
+    status: error
+    note: (#36104) You do not have permission to access this field outside of the
+      Business Discovery API.
+ig_user_insights:
+  endpoint: GET /{ig_user_id}/insights
+  doc: https://developers.facebook.com/docs/instagram-platform/api-reference/instagram-user/insights
+  authoritative_live_metrics:
+  - reach
+  - follower_count
+  - website_clicks
+  - profile_views
+  - online_followers
+  - accounts_engaged
+  - total_interactions
+  - likes
+  - comments
+  - shares
+  - saves
+  - replies
+  - engaged_audience_demographics
+  - reached_audience_demographics
+  - follower_demographics
+  - follows_and_unfollows
+  - profile_links_taps
+  - views
+  - threads_likes
+  - threads_replies
+  - reposts
+  - quotes
+  - threads_followers
+  - threads_follower_demographics
+  - content_views
+  - threads_views
+  - threads_clicks
+  - threads_reposts
+  metrics:
+  - name: reach
+    status: ok
+    note: ''
+  - name: likes
+    status: ok
+    note: ''
+  - name: saves
+    status: ok
+    note: ''
+  - name: shares
+    status: ok
+    note: ''
+  - name: replies
+    status: ok
+    note: ''
+  - name: reposts
+    status: ok
+    note: ''
+  - name: total_interactions
+    status: ok
+    note: ''
+  - name: follows_and_unfollows
+    status: ok
+    note: ''
+  - name: profile_links_taps
+    status: ok
+    note: ''
+  - name: accounts_engaged
+    status: ok
+    note: ''
+  - name: profile_visits
+    status: error
+    note: '(#100) metric[0] must be one of the following values: reach, follower_count,
+      website_clicks, profile_views, online_followers, accounts_engaged, total_interactions,
+      likes, comments, shares, saves, replies, engaged_audience_demographics, reached_audience_demographics,
+      follower_demographics, follows_and_unfollows, profile_links_taps, views, threads_likes,
+      threads_replies, reposts, quotes, threads_followers, threads_follower_demographics,
+      content_views, threads_views, threads_clicks, threads_reposts'
+  - name: views
+    status: ok
+    note: ''
+  - name: impressions
+    status: error
+    note: '(#100) metric[0] must be one of the following values: reach, follower_count,
+      website_clicks, profile_views, online_followers, accounts_engaged, total_interactions,
+      likes, comments, shares, saves, replies, engaged_audience_demographics, reached_audience_demographics,
+      follower_demographics, follows_and_unfollows, profile_links_taps, views, threads_likes,
+      threads_replies, reposts, quotes, threads_followers, threads_follower_demographics,
+      content_views, threads_views, threads_clicks, threads_reposts'
+ig_media_insights:
+  endpoint: GET /{ig_media_id}/insights
+  doc: https://developers.facebook.com/docs/instagram-platform/reference/instagram-media/insights
+  authoritative_live_metrics:
+  - impressions
+  - reach
+  - replies
+  - saved
+  - likes
+  - comments
+  - shares
+  - total_interactions
+  - follows
+  - profile_visits
+  - profile_activity
+  - navigation
+  - ig_reels_video_view_total_time
+  - ig_reels_avg_watch_time
+  - views
+  - reels_skip_rate
+  - reposts
+  - facebook_views
+  - crossposted_views
+  - total_views
+  - total_likes
+  - total_comments
+  - link_clicks
+  by_media_type:
+    VIDEO:
+    - name: reach
+      status: ok
+      note: ''
+    - name: views
+      status: ok
+      note: ''
+    - name: comments
+      status: ok
+      note: ''
+    - name: likes
+      status: ok
+      note: ''
+    - name: saved
+      status: ok
+      note: ''
+    - name: shares
+      status: ok
+      note: ''
+    - name: reposts
+      status: ok
+      note: ''
+    - name: total_interactions
+      status: ok
+      note: ''
+    - name: profile_activity
+      status: unsupported
+      note: (#100) The Media Insights API does not support the profile_activity metric
+        for this media product type.
+    - name: profile_visits
+      status: unsupported
+      note: (#100) The Media Insights API does not support the profile_visits metric
+        for this media product type.
+    - name: follows
+      status: unsupported
+      note: (#100) The Media Insights API does not support the follows metric for
+        this media product type.
+    - name: navigation
+      status: unsupported
+      note: (#100) The Media Insights API does not support the navigation metric for
+        this media product type.
+    - name: replies
+      status: unsupported
+      note: (#100) The Media Insights API does not support the replies metric for
+        this media product type.
+    - name: link_clicks
+      status: unsupported
+      note: (#100) The Media Insights API does not support the link_clicks metric
+        for this media product type.
+    - name: facebook_views
+      status: error
+      note: Fatal
+    - name: crossposted_views
+      status: error
+      note: Fatal
+    - name: ig_reels_avg_watch_time
+      status: ok
+      note: ''
+    - name: ig_reels_video_view_total_time
+      status: ok
+      note: ''
+    - name: reels_skip_rate
+      status: ok
+      note: ''
+    - name: total_comments
+      status: ok
+      note: ''
+    - name: total_likes
+      status: ok
+      note: ''
+    - name: total_views
+      status: ok
+      note: ''
+    - name: impressions
+      status: unsupported
+      note: (#100) The Media Insights API does not support the impressions metric
+        for this media product type.
+    CAROUSEL_ALBUM:
+    - name: reach
+      status: ok
+      note: ''
+    - name: views
+      status: ok
+      note: ''
+    - name: comments
+      status: ok
+      note: ''
+    - name: likes
+      status: ok
+      note: ''
+    - name: saved
+      status: ok
+      note: ''
+    - name: shares
+      status: ok
+      note: ''
+    - name: reposts
+      status: ok
+      note: ''
+    - name: total_interactions
+      status: ok
+      note: ''
+    - name: profile_activity
+      status: ok
+      note: ''
+    - name: profile_visits
+      status: ok
+      note: ''
+    - name: follows
+      status: ok
+      note: ''
+    - name: navigation
+      status: unsupported
+      note: (#100) The Media Insights API does not support the navigation metric for
+        this media product type.
+    - name: replies
+      status: unsupported
+      note: (#100) The Media Insights API does not support the replies metric for
+        this media product type.
+    - name: link_clicks
+      status: unsupported
+      note: (#100) The Media Insights API does not support the link_clicks metric
+        for this media product type.
+    - name: facebook_views
+      status: error
+      note: Fatal
+    - name: crossposted_views
+      status: unsupported
+      note: (#100) The Media Insights API does not support the crossposted_views metric
+        for this media product type.
+    - name: ig_reels_avg_watch_time
+      status: unsupported
+      note: (#100) The Media Insights API does not support the ig_reels_avg_watch_time
+        metric for this media product type.
+    - name: ig_reels_video_view_total_time
+      status: unsupported
+      note: (#100) The Media Insights API does not support the ig_reels_video_view_total_time
+        metric for this media product type.
+    - name: reels_skip_rate
+      status: unsupported
+      note: (#100) The Media Insights API does not support the reels_skip_rate metric
+        for this media product type.
+    - name: total_comments
+      status: ok
+      note: ''
+    - name: total_likes
+      status: ok
+      note: ''
+    - name: total_views
+      status: ok
+      note: ''
+    - name: impressions
+      status: error
+      note: (#100) Starting from version v22.0 and above, the impressions metric is
+        no longer supported for the queried media. Please refer to the documentation
+        at https://developers.facebook.com/docs/instagram-api/reference/ig-media/insights
+        for a list of supported metrics.
+    IMAGE:
+    - name: reach
+      status: ok
+      note: ''
+    - name: views
+      status: ok
+      note: ''
+    - name: comments
+      status: ok
+      note: ''
+    - name: likes
+      status: ok
+      note: ''
+    - name: saved
+      status: ok
+      note: ''
+    - name: shares
+      status: ok
+      note: ''
+    - name: reposts
+      status: ok
+      note: ''
+    - name: total_interactions
+      status: ok
+      note: ''
+    - name: profile_activity
+      status: ok
+      note: ''
+    - name: profile_visits
+      status: ok
+      note: ''
+    - name: follows
+      status: ok
+      note: ''
+    - name: navigation
+      status: unsupported
+      note: (#100) The Media Insights API does not support the navigation metric for
+        this media product type.
+    - name: replies
+      status: unsupported
+      note: (#100) The Media Insights API does not support the replies metric for
+        this media product type.
+    - name: link_clicks
+      status: unsupported
+      note: (#100) The Media Insights API does not support the link_clicks metric
+        for this media product type.
+    - name: facebook_views
+      status: error
+      note: Fatal
+    - name: crossposted_views
+      status: unsupported
+      note: (#100) The Media Insights API does not support the crossposted_views metric
+        for this media product type.
+    - name: ig_reels_avg_watch_time
+      status: unsupported
+      note: (#100) The Media Insights API does not support the ig_reels_avg_watch_time
+        metric for this media product type.
+    - name: ig_reels_video_view_total_time
+      status: unsupported
+      note: (#100) The Media Insights API does not support the ig_reels_video_view_total_time
+        metric for this media product type.
+    - name: reels_skip_rate
+      status: unsupported
+      note: (#100) The Media Insights API does not support the reels_skip_rate metric
+        for this media product type.
+    - name: total_comments
+      status: ok
+      note: ''
+    - name: total_likes
+      status: ok
+      note: ''
+    - name: total_views
+      status: ok
+      note: ''
+    - name: impressions
+      status: error
+      note: (#100) Starting from version v22.0 and above, the impressions metric is
+        no longer supported for the queried media. Please refer to the documentation
+        at https://developers.facebook.com/docs/instagram-api/reference/ig-media/insights
+        for a list of supported metrics.

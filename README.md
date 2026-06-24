@@ -143,6 +143,16 @@ Meltano automatically manages state (bookmarks) between runs via its own system 
 
 ## Development
 
+### API field/metric reference
+
+[`docs/meta_api_reference.md`](docs/meta_api_reference.md) lists every field/metric we know per node/edge, **validated against the live Meta API** (Meta doesn't expose introspection on Instagram nodes, so we test a curated candidate list instead). It's the menu for `user_fields`/`media_fields`/`metrics`, and it surfaces deprecations. For the insights edges it also captures Meta's **authoritative live metric list** (read straight from the API's error message).
+
+Regenerate it anytime (needs a `config.json` with `access_token`/`ig_user_id`):
+```bash
+python scripts/introspect.py
+```
+The `git diff` of `docs/meta_api_reference.{md,yaml}` is then the changelog of what Meta added or dropped. Add newly documented items to [`scripts/api_candidates.yaml`](scripts/api_candidates.yaml) when the docs introduce them.
+
 ### Tests
 
 ```bash

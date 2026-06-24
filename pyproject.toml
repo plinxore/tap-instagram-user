@@ -105,6 +105,8 @@ testpaths = [
 [tool.ruff]
 line-length = 100
 required-version = ">=0.15"
+# Maintenance utilities (live-API introspection), not part of the package.
+extend-exclude = ["scripts"]
 
 [tool.ruff.lint]
 future-annotations = true
