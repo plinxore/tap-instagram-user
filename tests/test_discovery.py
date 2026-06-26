@@ -30,6 +30,21 @@ def test_user_stream_naming() -> None:
     }
 
 
+def test_metric_type_ventilation() -> None:
+    # total_value (default) -> no segment; non-default -> a `_<metric_type>`
+    # segment, so the same metric can be requested in both without collision.
+    tap = make_tap(
+        metrics=[
+            {"metric": "reach"},  # inherits the default total_value
+            {"metric": "reach", "metric_type": "time_series"},
+        ]
+    )
+    names = _names(tap)
+    assert "ig_user_insights_reach" in names
+    assert "ig_user_insights_reach_time_series" in names
+    assert len(names) == 2  # distinct, no collision/overwrite
+
+
 def test_no_media_streams_without_media_fields() -> None:
     # User-only setup: no media streams discovered.
     assert not any(n.startswith("ig_media") for n in _names(make_tap()))

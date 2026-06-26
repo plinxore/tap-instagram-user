@@ -33,6 +33,8 @@ uv sync
 
 Each entry defines a metric and generates one stream per metric/breakdown combination (e.g. `views` + `follow_type` -> stream `ig_user_insights_views_by_follow_type`; `reach` with no breakdown -> `ig_user_insights_reach`). An entry may override any of the settings above (except `access_token`/`ig_user_id`, always global) for itself only:
 
+The stream name also carries `metric_type` when it is **not** the default `total_value` (so a metric can be requested in both types without collision): `ig_user_insights_reach` (total_value) vs `ig_user_insights_reach_time_series`. Note that `time_series` **drops breakdowns** (an API rule), and to be useful it should be paired with `generate_dates_range: inactive` (one call returns the whole daily series); with the default `total_value` + day-by-day you already get a daily series **with** breakdowns, so `time_series` is only an opt-in efficiency option for breakdown-less metrics (mainly `reach`).
+
 ```json
 {
   "metrics": [

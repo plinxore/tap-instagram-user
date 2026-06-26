@@ -318,16 +318,26 @@ class TapInstagramUser(Tap):
         for entry in metrics_config:
             metric = entry["metric"]
             breakdowns = entry.get("breakdowns") or [""]
+            # Effective metric_type for this entry (per-entry override, else the
+            # tap default). A `_<metric_type>` segment is added only when it is
+            # NOT total_value, so the common case keeps clean names AND the same
+            # metric can be requested in both metric_types without collision
+            # (e.g. reach in total_value -> ig_user_insights_reach, and in
+            # time_series -> ig_user_insights_reach_time_series).
+            metric_type = (
+                entry.get("metric_type") or self.config.get("metric_type") or "total_value"
+            )
+            mt_segment = "" if metric_type == "total_value" else f"_{metric_type}"
             for breakdown in breakdowns:
                 # SQL-friendly table name (no comma). Scheme:
-                # ig_<node>_<edge>[_<metric>[_by_<breakdown>]] — here the User
-                # node's Insights edge. The explicit `insights` segment keeps
-                # the name collision-free if other User edges are added later.
+                # ig_<node>_<edge>_<metric>[_<metric_type>][_by_<breakdown>]
+                # — here the User node's Insights edge.
+                base = f"ig_user_insights_{metric}{mt_segment}"
                 if breakdown:
                     safe_breakdown = breakdown.replace(",", "_and_")
-                    stream_name = f"ig_user_insights_{metric}_by_{safe_breakdown}"
+                    stream_name = f"{base}_by_{safe_breakdown}"
                 else:
-                    stream_name = f"ig_user_insights_{metric}"
+                    stream_name = base
 
                 # Any overrides on this `metrics` entry are propagated to the
                 # stream (None if absent, in which case get_param() falls
